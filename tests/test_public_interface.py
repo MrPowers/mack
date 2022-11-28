@@ -2,8 +2,16 @@ import pytest
 import chispa
 import pyspark
 from delta import *
-import datetime
-from pyspark.sql.types import StructType,StructField, StringType, IntegerType, BooleanType, DateType
+from datetime import datetime as dt
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    StringType,
+    IntegerType,
+    BooleanType,
+    DateType,
+    TimestampType,
+)
 import mack
 
 builder = (
@@ -17,58 +25,183 @@ builder = (
 
 spark = configure_spark_with_delta_pip(builder).getOrCreate()
 
-def test_type_2_scd_generic_upsert():
-    # versions = [0, 1]
-    # for v in versions:
-    #     actual_df = spark.read.format("delta").option("versionAsOf", v).load("out/tables/generated/reference_table_1/delta")
-    #     expected_df = spark.read.format("parquet").load(f"out/tables/generated/reference_table_1/expected/v{v}/table_content.parquet")
-    #     chispa.assert_df_equality(actual_df, expected_df)
+def describe_upsert():
+    def it_upserts_with_single_attribute():
+        path = "tmp/delta-upsert-single-attr"
+        data2 = [
+            (1, "A", True, dt(2019, 1, 1), None),
+            (2, "B", True, dt(2019, 1, 1), None),
+            (4, "D", True, dt(2019, 1, 1), None),
+        ]
+        schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr", StringType(), True),
+                StructField("is_current", BooleanType(), True),
+                StructField("effective_time", TimestampType(), True),
+                StructField("end_time", TimestampType(), True),
+            ]
+        )
+        df = spark.createDataFrame(data=data2, schema=schema)
+        df.write.format("delta").save(path)
 
-    path = "tmp/delta-upsert-date"
-    # // create Delta Lake
-    data2 = [
-        (1, "A", True, datetime.datetime(2019, 1, 1), None),
-        (2, "B", True, datetime.datetime(2019, 1, 1), None),
-        (4, "D", True, datetime.datetime(2019, 1, 1), None),
-    ]
+        updates_data = [
+            (2, "Z", dt(2020, 1, 1)),  # value to upsert
+            (3, "C", dt(2020, 9, 15)),  # new value
+        ]
+        updates_schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr", StringType(), True),
+                StructField("effective_time", TimestampType(), True),
+            ]
+        )
+        updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    schema = StructType([
-        StructField("pkey",IntegerType(),True),
-        StructField("attr",StringType(),True),
-        StructField("cur",BooleanType(),True),
-        StructField("effective_date", DateType(), True),
-        StructField("end_date", DateType(), True)
-    ])
+        mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
 
-    df = spark.createDataFrame(data=data2,schema=schema)
-    df.write.format("delta").save(path)
+        actual_df = spark.read.format("delta").load(path)
 
-    # create updates DF
-    updatesDF = spark.createDataFrame([
-        (3, "C", datetime.datetime(2020, 9, 15)), # new value
-        (2, "Z", datetime.datetime(2020, 1, 1)), # value to upsert
-    ]).toDF("pkey", "attr", "effective_date")
+        expected_df = spark.createDataFrame(
+            [
+                (2, "B", False, dt(2019, 1, 1), dt(2020, 1, 1)),
+                (3, "C", True, dt(2020, 9, 15), None),
+                (2, "Z", True, dt(2020, 1, 1), None),
+                (4, "D", True, dt(2019, 1, 1), None),
+                (1, "A", True, dt(2019, 1, 1), None),
+            ],
+            schema,
+        )
 
-    # perform upsert
-    mack.type_2_scd_generic_upsert(path, updatesDF, "pkey", ["attr"], "cur", "effective_date", "end_date")
+        chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
 
-    actual_df = spark.read.format("delta").load(path)
+    def it_errors_out_if_base_df_does_not_have_all_required_columns():
+        path = "tmp/delta-incomplete"
+        data2 = [
+            ("A", True, dt(2019, 1, 1), None),
+            ("B", True, dt(2019, 1, 1), None),
+            ("D", True, dt(2019, 1, 1), None),
+        ]
+        schema = StructType(
+            [
+                StructField("attr", StringType(), True),
+                StructField("is_current", BooleanType(), True),
+                StructField("effective_time", TimestampType(), True),
+                StructField("end_time", TimestampType(), True),
+            ]
+        )
+        df = spark.createDataFrame(data=data2, schema=schema)
+        df.write.format("delta").save(path)
 
-    expected_df = spark.createDataFrame([
-        (2, "B", False, datetime.datetime(2019, 1, 1), datetime.datetime(2020, 1, 1)),
-        (3, "C", True, datetime.datetime(2020, 9, 15), None),
-        (2, "Z", True, datetime.datetime(2020, 1, 1), None),
-        (4, "D", True, datetime.datetime(2019, 1, 1), None),
-        (1, "A", True, datetime.datetime(2019, 1, 1), None),
-    ], schema)
+        updates_data = [
+            (2, "Z", dt(2020, 1, 1)),  # value to upsert
+            (3, "C", dt(2020, 9, 15)),  # new value
+        ]
+        updates_schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr", StringType(), True),
+                StructField("effective_time", TimestampType(), True),
+            ]
+        )
+        updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+        with pytest.raises(mack.MackValidationError) as e_info:
+            mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
 
-    # val expected = Seq(
-    # (2, "B", false, Date.valueOf("2019-01-01"), Date.valueOf("2020-01-01")),
-    # (3, "C", true, Date.valueOf("2020-09-15"), null),
-    # (2, "Z", true, Date.valueOf("2020-01-01"), null),
-    # (4, "D", true, Date.valueOf("2019-01-01"), null),
-    # (1, "A", true, Date.valueOf("2019-01-01"), null),
-    # ).toDF("pkey", "attr", "cur", "effective_date", "end_date")
-    # assertSmallDataFrameEquality(res, expected, orderedComparison = false, ignoreNullable = true)
+
+def describe_type_2_scd_generic_upsert():
+    def it_upserts_based_on_date_columns():
+        path = "tmp/delta-upsert-date"
+        # // create Delta Lake
+        data2 = [
+            (1, "A", True, dt(2019, 1, 1), None),
+            (2, "B", True, dt(2019, 1, 1), None),
+            (4, "D", True, dt(2019, 1, 1), None),
+        ]
+
+        schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr", StringType(), True),
+                StructField("cur", BooleanType(), True),
+                StructField("effective_date", DateType(), True),
+                StructField("end_date", DateType(), True),
+            ]
+        )
+
+        df = spark.createDataFrame(data=data2, schema=schema)
+        df.write.format("delta").save(path)
+
+        # create updates DF
+        updatesDF = spark.createDataFrame(
+            [
+                (3, "C", dt(2020, 9, 15)),  # new value
+                (2, "Z", dt(2020, 1, 1)),  # value to upsert
+            ]
+        ).toDF("pkey", "attr", "effective_date")
+
+        # perform upsert
+        mack.type_2_scd_generic_upsert(path, updatesDF, "pkey", ["attr"], "cur", "effective_date", "end_date")
+
+        actual_df = spark.read.format("delta").load(path)
+
+        expected_df = spark.createDataFrame(
+            [
+                (2, "B", False, dt(2019, 1, 1), dt(2020, 1, 1)),
+                (3, "C", True, dt(2020, 9, 15), None),
+                (2, "Z", True, dt(2020, 1, 1), None),
+                (4, "D", True, dt(2019, 1, 1), None),
+                (1, "A", True, dt(2019, 1, 1), None),
+            ],
+            schema,
+        )
+
+        chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+
+    def it_upserts_based_on_version_number():
+        path = "tmp/delta-upsert-version"
+        # create Delta Lake
+        data2 = [
+            (1, "A", True, 1, None),
+            (2, "B", True, 1, None),
+            (4, "D", True, 1, None),
+        ]
+
+        schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr", StringType(), True),
+                StructField("is_current", BooleanType(), True),
+                StructField("effective_ver", IntegerType(), True),
+                StructField("end_ver", IntegerType(), True),
+            ]
+        )
+
+        df = spark.createDataFrame(data=data2, schema=schema)
+
+        df.write.format("delta").save(path)
+
+        # create updates DF
+        updatesDF = spark.createDataFrame([
+            (2, "Z", 2), # value to upsert
+            (3, "C", 3), # new value
+        ]).toDF("pkey", "attr", "effective_ver")
+        
+        # perform upsert
+        mack.type_2_scd_generic_upsert(path, updatesDF, "pkey", ["attr"], "is_current", "effective_ver", "end_ver")
+        
+        # show result
+        res = spark.read.format("delta").load(path)
+
+        expected_data = [
+            (2, "B", False, 1, 2),
+            (3, "C", True, 3, None),
+            (2, "Z", True, 2, None),
+            (4, "D", True, 1, None),
+            (1, "A", True, 1, None),
+        ]
+
+        expected = spark.createDataFrame(expected_data, schema)
+
+        chispa.assert_df_equality(res, expected, ignore_row_order=True)
