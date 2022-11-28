@@ -84,6 +84,7 @@ def describe_upsert():
         ]
         schema = StructType(
             [
+                # pkey is missing from base!
                 StructField("attr", StringType(), True),
                 StructField("is_current", BooleanType(), True),
                 StructField("effective_time", TimestampType(), True),
@@ -108,6 +109,94 @@ def describe_upsert():
 
         with pytest.raises(mack.MackValidationError) as e_info:
             mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
+
+
+    def it_errors_out_if_updates_table_does_not_contain_all_required_columns():
+        path = "tmp/delta-error-udpate-missing-col"
+        data2 = [
+            (1, "A", True, dt(2019, 1, 1), None),
+            (2, "B", True, dt(2019, 1, 1), None),
+            (4, "D", True, dt(2019, 1, 1), None),
+        ]
+        schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr", StringType(), True),
+                StructField("is_current", BooleanType(), True),
+                StructField("effective_time", TimestampType(), True),
+                StructField("end_time", TimestampType(), True),
+            ]
+        )
+        df = spark.createDataFrame(data=data2, schema=schema)
+        df.write.format("delta").save(path)
+
+        updates_data = [
+            ("Z", dt(2020, 1, 1)),  # value to upsert
+            ("C", dt(2020, 9, 15)),  # new value
+        ]
+        updates_schema = StructType(
+            [
+                # pkey is missing from updates DataFrame
+                StructField("attr", StringType(), True),
+                StructField("effective_time", TimestampType(), True),
+            ]
+        )
+        updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+        with pytest.raises(mack.MackValidationError) as e_info:
+            mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
+
+
+    def it_upserts_based_on_multiple_attributes():
+        path = "tmp/delta-upsert-multiple-attr"
+        data2 = [
+            (1, "A", "A", True, dt(2019, 1, 1), None),
+            (2, "B", "B", True, dt(2019, 1, 1), None),
+            (4, "D", "D", True, dt(2019, 1, 1), None),
+        ]
+        schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr1", StringType(), True),
+                StructField("attr2", StringType(), True),
+                StructField("is_current", BooleanType(), True),
+                StructField("effective_time", TimestampType(), True),
+                StructField("end_time", TimestampType(), True),
+            ]
+        )
+        df = spark.createDataFrame(data=data2, schema=schema)
+        df.write.format("delta").save(path)
+
+        updates_data = [
+            (2, "Z", None, dt(2020, 1, 1)),  # value to upsert
+            (3, "C", "C", dt(2020, 9, 15)),  # new value
+        ]
+        updates_schema = StructType(
+            [
+                StructField("pkey", IntegerType(), True),
+                StructField("attr1", StringType(), True),
+                StructField("attr2", StringType(), True),
+                StructField("effective_time", TimestampType(), True),
+            ]
+        )
+        updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+        mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
+
+        actual_df = spark.read.format("delta").load(path)
+
+        expected_df = spark.createDataFrame(
+            [
+                (2, "B", "B", False, dt(2019, 1, 1), dt(2020, 1, 1)),
+                (3, "C", "C", True, dt(2020, 9, 15), None),
+                (2, "Z", None, True, dt(2020, 1, 1), None),
+                (4, "D", "D", True, dt(2019, 1, 1), None),
+                (1, "A", "A", True, dt(2019, 1, 1), None),
+            ],
+            schema,
+        )
+
+        chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
 
 
 def describe_type_2_scd_generic_upsert():
