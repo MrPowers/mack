@@ -68,3 +68,40 @@ You can leverage the upsert code if your SCD table meets these requirements:
 * Contains a unique primary key column
 * Any change in an attribute column triggers an upsert
 * SCD logic is exposed via `effective_time`, `end_time` and `is_current` column (you can also use date or version columns for SCD upserts)
+
+## Kill duplicates
+
+The `kill_duplicate` function completely removes all duplicate rows from a Delta table.
+
+Suppose you have the following table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A| # duplicate
+|   2|   A|   B|
+|   3|   A|   A| # duplicate
+|   4|   A|   A| # duplicate
+|   5|   B|   B| # duplicate
+|   6|   D|   D|
+|   9|   B|   B| # duplicate
++----+----+----+
+```
+
+Run the `kill_duplicates` function:
+
+```python
+mack.kill_duplicates(deltaTable, "col1", ["col2", "col3"])
+```
+
+Here's the ending state of the table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   2|   A|   B|
+|   6|   D|   D|
++----+----+----+
+```

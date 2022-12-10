@@ -1,5 +1,6 @@
 from delta import *
 import pyspark
+import pyspark.sql.functions as F
 
 
 class MackValidationError(ValueError):
@@ -84,3 +85,21 @@ def type_2_scd_generic_upsert(
         .execute()
     )
     return res
+
+
+def kill_duplicates(deltaTable, pkey, cols):
+    spark = pyspark.sql.SparkSession.getActiveSession()
+    colsA = ", ".join(cols)
+    deltaTable.toDF().createOrReplaceTempView("temp")
+    dfTemp = (
+        spark.sql(f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {colsA} ORDER BY {pkey} DESC) rn FROM temp")
+    ).filter(F.col('rn') > 1).drop('rn').distinct()
+
+    q = []
+    for col in cols:
+        q.append(f"main.{col} = nodups.{col}")
+    q = " AND ".join(q)
+
+    deltaTable.alias("main").merge(
+        dfTemp.alias("nodups"), q
+    ).whenMatchedDelete().execute()
