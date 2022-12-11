@@ -1,4 +1,3 @@
-import delta
 from delta import *
 import pyspark
 import pyspark.sql.functions as F
@@ -106,7 +105,7 @@ def kill_duplicates(deltaTable, pkey, cols):
     ).whenMatchedDelete().execute()
 
 
-def copy_table(delta_table: delta.DeltaTable, target_path: str = None, target_table: str = None):
+def copy_table(delta_table: DeltaTable, target_path: str = None, target_table: str = None):
     if not delta_table:
         raise Exception("An existing delta table must be specified.")
 
