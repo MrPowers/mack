@@ -1,3 +1,4 @@
+import delta
 from delta import *
 import pyspark
 import pyspark.sql.functions as F
@@ -20,13 +21,13 @@ def type_2_scd_upsert(path, updates_df, primaryKey, attrColNames):
 
 
 def type_2_scd_generic_upsert(
-    path,
-    updates_df,
-    primaryKey,
-    attrColNames,
-    isCurrentColName,
-    effectiveTimeColName,
-    endTimeColName,
+        path,
+        updates_df,
+        primaryKey,
+        attrColNames,
+        isCurrentColName,
+        effectiveTimeColName,
+        endTimeColName,
 ):
     baseTable = DeltaTable.forPath(pyspark.sql.SparkSession.getActiveSession(), path)
     # validate the existing Delta table
@@ -103,3 +104,38 @@ def kill_duplicates(deltaTable, pkey, cols):
     deltaTable.alias("main").merge(
         dfTemp.alias("nodups"), q
     ).whenMatchedDelete().execute()
+
+
+def copy_table(delta_table: delta.DeltaTable, target_path: str = None, target_table: str = None):
+    if not delta_table:
+        raise Exception("An existing delta table must be specified.")
+
+    if not target_path and not target_table:
+        raise Exception("Either target_path or target_table must be specified.")
+
+    origin_table = delta_table.toDF()
+
+    details = (
+        delta_table
+        .detail()
+        .select("partitionColumns", "properties")
+        .collect()[0]
+    )
+
+    if target_table:
+        (
+            origin_table
+            .write.format("delta")
+            .partitionBy(details["partitionColumns"])
+            .options(**details["properties"])
+            .saveAsTable(target_table)
+        )
+    else:
+        (
+            origin_table
+            .write
+            .format("delta")
+            .partitionBy(details["partitionColumns"])
+            .options(**details["properties"])
+            .save(target_path)
+        )
