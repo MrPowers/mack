@@ -108,15 +108,18 @@ def kill_duplicates(deltaTable, pkey, cols):
     ).whenMatchedDelete().execute()
 
 
-def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_columns: List[str]):
+def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_columns: List[str] = None):
     if not delta_table:
         raise Exception("An existing delta table must be specified.")
 
     if not primary_key:
         raise Exception("A primary key must be specified.")
 
-    if not duplication_columns or len(duplication_columns) == 0:
-        raise Exception("Duplication columns must not be empty or None.")
+    if not duplication_columns:
+        duplication_columns = []
+
+    if primary_key in duplication_columns:
+        raise Exception("Primary key must not be part of the duplication columns.")
 
     data_frame = delta_table.toDF()
 
@@ -129,18 +132,32 @@ def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_colum
                 f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_columns}'"
             )
 
-    # Get all the duplicate records
-    duplicate_records = (
-        data_frame
-        .withColumn("row_number", F.row_number().over(Window().partitionBy(duplication_columns).orderBy(primary_key)))
-        .filter(F.col("row_number") > 1)
-        .drop("row_number")
-        .distinct()
-    ).cache()
+    q = []
 
-    q = [f"old.{primary_key} = new.{primary_key}"]
-    for column in duplication_columns:
-        q.append(f"old.{column} = new.{column}")
+    # Get all the duplicate records
+    if len(duplication_columns) > 0:
+        duplicate_records = (
+            data_frame
+            .withColumn("row_number", F.row_number().over(Window().partitionBy(duplication_columns).orderBy(primary_key)))
+            .filter(F.col("row_number") > 1)
+            .drop("row_number")
+            .distinct()
+        )
+        for column in required_columns:
+            q.append(f"old.{column} = new.{column}")
+
+    else:
+        duplicate_records = (
+            data_frame
+            .withColumn("row_number", F.row_number().over(Window().partitionBy(primary_key).orderBy(primary_key)))
+            .filter(F.col("row_number") > 1)
+            .drop("row_number")
+            .distinct()
+        )
+
+        for column in duplicate_records.columns + [primary_key]:
+            q.append(f"old.{column} = new.{column}")
+
     q = " AND ".join(q)
 
     # Remove all the duplicate records

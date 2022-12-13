@@ -138,9 +138,9 @@ Here's the ending state of the table:
 +----+----+----+
 |col1|col2|col3|
 +----+----+----+
-|   1|   A|   A| # duplicate
+|   1|   A|   A|
 |   2|   A|   B|
-|   5|   B|   B| # duplicate
+|   5|   B|   B|
 |   6|   D|   D|
 +----+----+----+
 ```

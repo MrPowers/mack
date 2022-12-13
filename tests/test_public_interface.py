@@ -356,9 +356,9 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
     res = spark.read.format("delta").load(path)
 
     expected_data = [
-        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),
         (2, "A", "B", "C"),
-        (5, "B", "B", "C"),  # duplicate
+        (5, "B", "B", "C"),
         (6, "D", "D", "C"),
     ]
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3", "col4"])
