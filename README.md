@@ -106,6 +106,45 @@ Here's the ending state of the table:
 +----+----+----+
 ```
 
+## Drop duplicates
+
+The `drop_duplicates` function removes all but one duplicate row from a Delta table.
+
+Suppose you have the following table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A| # duplicate
+|   2|   A|   B|
+|   3|   A|   A| # duplicate
+|   4|   A|   A| # duplicate
+|   5|   B|   B| # duplicate
+|   6|   D|   D|
+|   9|   B|   B| # duplicate
++----+----+----+
+```
+
+Run the `drop_duplicates` function:
+
+```python
+mack.drop_duplicates(delta_table=deltaTable, primary_key="col1", duplication_columns=["col2", "col3"])
+```
+
+Here's the ending state of the table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   A|   B|
+|   5|   B|   B|
+|   6|   D|   D|
++----+----+----+
+```
+
 ## Copy table
 
 The `copy_table` function copies an existing Delta table.

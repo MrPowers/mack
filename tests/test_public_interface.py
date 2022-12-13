@@ -335,6 +335,37 @@ def test_kills_duplicates_in_a_delta_table(tmp_path):
     chispa.assert_df_equality(res, expected, ignore_row_order=True)
 
 
+def test_drop_duplicates_in_a_delta_table(tmp_path):
+    path = f"{tmp_path}/drop_duplicates"
+    data = [
+        (1, "A", "A", "C"),  # duplicate
+        (2, "A", "B", "C"),
+        (3, "A", "A", "D"),  # duplicate
+        (4, "A", "A", "E"),  # duplicate
+        (5, "B", "B", "C"),  # duplicate
+        (6, "D", "D", "C"),
+        (9, "B", "B", "E"),  # duplicate
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3", "col4"])
+    df.write.format("delta").save(path)
+
+    deltaTable = DeltaTable.forPath(spark, path)
+
+    mack.drop_duplicates(deltaTable, "col1", ["col2", "col3"])
+
+    res = spark.read.format("delta").load(path)
+
+    expected_data = [
+        (1, "A", "A", "C"),
+        (2, "A", "B", "C"),
+        (5, "B", "B", "C"),
+        (6, "D", "D", "C"),
+    ]
+    expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3", "col4"])
+
+    chispa.assert_df_equality(res, expected, ignore_row_order=True)
+
+
 def test_copy_delta_table(tmp_path):
     path = f"{tmp_path}/copy_test_1"
     data = [

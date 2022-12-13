@@ -1,6 +1,9 @@
+from typing import List
+
 from delta import *
 import pyspark
 import pyspark.sql.functions as F
+from pyspark.sql.window import Window
 
 
 class MackValidationError(ValueError):
@@ -102,6 +105,64 @@ def kill_duplicates(deltaTable, pkey, cols):
 
     deltaTable.alias("main").merge(
         dfTemp.alias("nodups"), q
+    ).whenMatchedDelete().execute()
+
+
+def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_columns: List[str] = None):
+    if not delta_table:
+        raise Exception("An existing delta table must be specified.")
+
+    if not primary_key:
+        raise Exception("A primary key must be specified.")
+
+    if not duplication_columns:
+        duplication_columns = []
+
+    if primary_key in duplication_columns:
+        raise Exception("Primary key must not be part of the duplication columns.")
+
+    data_frame = delta_table.toDF()
+
+    # Make sure that all the required columns are present in the provided delta table
+    data_frame_columns = data_frame.columns
+    required_columns = [primary_key] + duplication_columns
+    for required_column in required_columns:
+        if required_column not in data_frame_columns:
+            raise MackValidationError(
+                f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_columns}'"
+            )
+
+    q = []
+
+    # Get all the duplicate records
+    if len(duplication_columns) > 0:
+        duplicate_records = (
+            data_frame
+            .withColumn("row_number", F.row_number().over(Window().partitionBy(duplication_columns).orderBy(primary_key)))
+            .filter(F.col("row_number") > 1)
+            .drop("row_number")
+            .distinct()
+        )
+        for column in required_columns:
+            q.append(f"old.{column} = new.{column}")
+
+    else:
+        duplicate_records = (
+            data_frame
+            .withColumn("row_number", F.row_number().over(Window().partitionBy(primary_key).orderBy(primary_key)))
+            .filter(F.col("row_number") > 1)
+            .drop("row_number")
+            .distinct()
+        )
+
+        for column in duplicate_records.columns + [primary_key]:
+            q.append(f"old.{column} = new.{column}")
+
+    q = " AND ".join(q)
+
+    # Remove all the duplicate records
+    delta_table.alias("old").merge(
+        duplicate_records.alias("new"), q
     ).whenMatchedDelete().execute()
 
 
