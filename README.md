@@ -105,3 +105,22 @@ Here's the ending state of the table:
 |   6|   D|   D|
 +----+----+----+
 ```
+
+## Copy table
+
+The `copy_table` function copies an existing Delta table.
+When you copy a table, it gets recreated at a specified target. This target could be a path or a table in a metastore.
+Copying includes:
+
+* Data
+* Partitioning
+* Table properties
+
+Copying **does not** include the delta log, which means that you will not be able to restore the new table to an old version of the original table.
+
+Here's how to perform the copy:
+
+```python
+mack.copy_table(delta_table=deltaTable, target_path=path)
+```
+
