@@ -25,6 +25,7 @@ builder = (
 
 spark = configure_spark_with_delta_pip(builder).getOrCreate()
 
+
 # upsert
 def test_upserts_with_single_attribute():
     path = "tmp/delta-upsert-single-attr"
@@ -74,6 +75,7 @@ def test_upserts_with_single_attribute():
     )
 
     chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+
 
 def test_errors_out_if_base_df_does_not_have_all_required_columns():
     path = "tmp/delta-incomplete"
@@ -249,6 +251,7 @@ def test_upserts_based_on_date_columns():
 
     chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
 
+
 def test_upserts_based_on_version_number():
     path = "tmp/delta-upsert-version"
     # create Delta Lake
@@ -274,13 +277,13 @@ def test_upserts_based_on_version_number():
 
     # create updates DF
     updatesDF = spark.createDataFrame([
-        (2, "Z", 2), # value to upsert
-        (3, "C", 3), # new value
+        (2, "Z", 2),  # value to upsert
+        (3, "C", 3),  # new value
     ]).toDF("pkey", "attr", "effective_ver")
-    
+
     # perform upsert
     mack.type_2_scd_generic_upsert(path, updatesDF, "pkey", ["attr"], "is_current", "effective_ver", "end_ver")
-    
+
     # show result
     res = spark.read.format("delta").load(path)
 
@@ -301,13 +304,13 @@ def test_upserts_based_on_version_number():
 def test_kills_duplicates_in_a_delta_table(tmp_path):
     path = f"{tmp_path}/deduplicate1"
     data = [
-        (1, "A", "A"), # duplicate
+        (1, "A", "A"),  # duplicate
         (2, "A", "B"),
-        (3, "A", "A"), # duplicate
-        (4, "A", "A"), # duplicate
-        (5, "B", "B"), # duplicate
+        (3, "A", "A"),  # duplicate
+        (4, "A", "A"),  # duplicate
+        (5, "B", "B"),  # duplicate
         (6, "D", "D"),
-        (9, "B", "B"), # duplicate
+        (9, "B", "B"),  # duplicate
     ]
     df = spark.createDataFrame(data, ["col1", "col2", "col3"])
     df.write.format("delta").save(path)
@@ -330,3 +333,32 @@ def test_kills_duplicates_in_a_delta_table(tmp_path):
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
 
     chispa.assert_df_equality(res, expected, ignore_row_order=True)
+
+
+def test_copy_delta_table(tmp_path):
+    path = f"{tmp_path}/copy_test_1"
+    data = [
+        (1, "A", "A"),
+        (2, "A", "B"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    (
+        df
+        .write
+        .format("delta")
+        .partitionBy(['col1'])
+        .option('delta.logRetentionDuration', 'interval 30 days')
+        .save(path)
+    )
+
+    origin_table = DeltaTable.forPath(spark, path)
+    origin_details = origin_table.detail().select("partitionColumns", "properties")
+
+    mack.copy_table(origin_table, f"{tmp_path}/copy_test_2")
+
+    copied_table = DeltaTable.forPath(spark, f"{tmp_path}/copy_test_2")
+    copied_details = copied_table.detail().select("partitionColumns", "properties")
+
+    chispa.assert_df_equality(origin_details, copied_details)
+    chispa.assert_df_equality(origin_table.toDF(), copied_table.toDF(), ignore_row_order=True)
