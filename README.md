@@ -92,7 +92,7 @@ Suppose you have the following table:
 Run the `kill_duplicates` function:
 
 ```python
-mack.kill_duplicates(deltaTable, "col1", ["col2", "col3"])
+mack.kill_duplicates(deltaTable, ["col2", "col3"])
 ```
 
 Here's the ending state of the table:

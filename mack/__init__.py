@@ -90,21 +90,41 @@ def type_2_scd_generic_upsert(
     return res
 
 
-def kill_duplicates(deltaTable, pkey, cols):
-    spark = pyspark.sql.SparkSession.getActiveSession()
-    colsA = ", ".join(cols)
-    deltaTable.toDF().createOrReplaceTempView("temp")
-    dfTemp = (
-        spark.sql(f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {colsA} ORDER BY {pkey} DESC) rn FROM temp")
-    ).filter(F.col('rn') > 1).drop('rn').distinct()
+def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = None):
+    if not delta_table:
+        raise Exception("An existing delta table must be specified.")
+
+    if not duplication_columns or len(duplication_columns) == 0:
+        raise Exception("Duplication columns must be specified")
+
+    data_frame = delta_table.toDF()
+
+    # Make sure that all the required columns are present in the provided delta table
+    data_frame_columns = data_frame.columns
+    for required_column in duplication_columns:
+        if required_column not in data_frame_columns:
+            raise MackValidationError(
+                f"The base table has these columns '{data_frame_columns}', but these columns are required '{duplication_columns}'"
+            )
 
     q = []
-    for col in cols:
-        q.append(f"main.{col} = nodups.{col}")
+
+    duplicate_records = (
+        data_frame
+        .withColumn("duplicate", F.count("*").over(Window.partitionBy(duplication_columns)))
+        .filter(F.col("duplicate") > 1)
+        .drop("duplicate")
+        .distinct()
+    )
+
+    for column in duplication_columns:
+        q.append(f"old.{column} = new.{column}")
+
     q = " AND ".join(q)
 
-    deltaTable.alias("main").merge(
-        dfTemp.alias("nodups"), q
+    # Remove all the duplicate records
+    delta_table.alias("old").merge(
+        duplicate_records.alias("new"), q
     ).whenMatchedDelete().execute()
 
 
