@@ -27,8 +27,8 @@ spark = configure_spark_with_delta_pip(builder).getOrCreate()
 
 
 # upsert
-def test_upserts_with_single_attribute():
-    path = "tmp/delta-upsert-single-attr"
+def test_upserts_with_single_attribute(tmp_path):
+    path = f"{tmp_path}/tmp/delta-upsert-single-attr"
     data2 = [
         (1, "A", True, dt(2019, 1, 1), None),
         (2, "B", True, dt(2019, 1, 1), None),
@@ -77,8 +77,8 @@ def test_upserts_with_single_attribute():
     chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
 
 
-def test_errors_out_if_base_df_does_not_have_all_required_columns():
-    path = "tmp/delta-incomplete"
+def test_errors_out_if_base_df_does_not_have_all_required_columns(tmp_path):
+    path = f"{tmp_path}/tmp/delta-incomplete"
     data2 = [
         ("A", True, dt(2019, 1, 1), None),
         ("B", True, dt(2019, 1, 1), None),
@@ -113,8 +113,8 @@ def test_errors_out_if_base_df_does_not_have_all_required_columns():
         mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
 
 
-def test_errors_out_if_updates_table_does_not_contain_all_required_columns():
-    path = "tmp/delta-error-udpate-missing-col"
+def test_errors_out_if_updates_table_does_not_contain_all_required_columns(tmp_path):
+    path = f"{tmp_path}/tmp/delta-error-udpate-missing-col"
     data2 = [
         (1, "A", True, dt(2019, 1, 1), None),
         (2, "B", True, dt(2019, 1, 1), None),
@@ -149,8 +149,8 @@ def test_errors_out_if_updates_table_does_not_contain_all_required_columns():
         mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
 
 
-def test_upserts_based_on_multiple_attributes():
-    path = "tmp/delta-upsert-multiple-attr"
+def test_upserts_based_on_multiple_attributes(tmp_path):
+    path = f"{tmp_path}/tmp/delta-upsert-multiple-attr"
     data2 = [
         (1, "A", "A", True, dt(2019, 1, 1), None),
         (2, "B", "B", True, dt(2019, 1, 1), None),
@@ -203,8 +203,8 @@ def test_upserts_based_on_multiple_attributes():
 
 # def describe_type_2_scd_generic_upsert():
 # type_2_scd_generic_upsert
-def test_upserts_based_on_date_columns():
-    path = "tmp/delta-upsert-date"
+def test_upserts_based_on_date_columns(tmp_path):
+    path = f"{tmp_path}/tmp/delta-upsert-date"
     # // create Delta Lake
     data2 = [
         (1, "A", True, dt(2019, 1, 1), None),
@@ -252,8 +252,8 @@ def test_upserts_based_on_date_columns():
     chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
 
 
-def test_upserts_based_on_version_number():
-    path = "tmp/delta-upsert-version"
+def test_upserts_based_on_version_number(tmp_path):
+    path = f"{tmp_path}/tmp/delta-upsert-version"
     # create Delta Lake
     data2 = [
         (1, "A", True, 1, None),
@@ -315,16 +315,11 @@ def test_kills_duplicates_in_a_delta_table(tmp_path):
     df = spark.createDataFrame(data, ["col1", "col2", "col3"])
     df.write.format("delta").save(path)
 
-    df.show()
-
     deltaTable = DeltaTable.forPath(spark, path)
 
     mack.kill_duplicates(deltaTable, "col1", ["col2", "col3"])
 
     res = spark.read.format("delta").load(path)
-
-    print("***")
-    res.show()
 
     expected_data = [
         (2, "A", "B"),

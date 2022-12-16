@@ -113,17 +113,17 @@ The `drop_duplicates` function removes all but one duplicate row from a Delta ta
 Suppose you have the following table:
 
 ```
-+----+----+----+
-|col1|col2|col3|
-+----+----+----+
-|   1|   A|   A| # duplicate
-|   2|   A|   B|
-|   3|   A|   A| # duplicate
-|   4|   A|   A| # duplicate
-|   5|   B|   B| # duplicate
-|   6|   D|   D|
-|   9|   B|   B| # duplicate
-+----+----+----+
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   1|   A|   A|   C| # duplicate1
+|   2|   A|   B|   C|
+|   3|   A|   A|   D| # duplicate1
+|   4|   A|   A|   E| # duplicate1
+|   5|   B|   B|   C| # duplicate2
+|   6|   D|   D|   C|
+|   9|   B|   B|   E| # duplicate2
++----+----+----+----+
 ```
 
 Run the `drop_duplicates` function:
@@ -135,14 +135,14 @@ mack.drop_duplicates(delta_table=deltaTable, primary_key="col1", duplication_col
 Here's the ending state of the table:
 
 ```
-+----+----+----+
-|col1|col2|col3|
-+----+----+----+
-|   1|   A|   A|
-|   2|   A|   B|
-|   5|   B|   B|
-|   6|   D|   D|
-+----+----+----+
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   1|   A|   A|   C|
+|   2|   A|   B|   C|
+|   5|   B|   B|   C|
+|   6|   D|   D|   C|
++----+----+----+----+
 ```
 
 ## Copy table
