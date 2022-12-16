@@ -351,7 +351,7 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
 
     deltaTable = DeltaTable.forPath(spark, path)
 
-    mack.drop_duplicates(deltaTable, ["col2", "col3"])
+    mack.drop_duplicates(deltaTable, "col1", ["col2", "col3"])
 
     res = spark.read.format("delta").load(path)
 

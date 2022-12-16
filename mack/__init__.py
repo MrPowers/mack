@@ -111,9 +111,9 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
 
     duplicate_records = (
         data_frame
-        .withColumn("duplicate", F.count("*").over(Window.partitionBy(duplication_columns)))
-        .filter(F.col("duplicate") > 1)
-        .drop("duplicate")
+        .withColumn("amount_of_records", F.count("*").over(Window.partitionBy(duplication_columns)))
+        .filter(F.col("amount_of_records") > 1)
+        .drop("amount_of_records")
         .distinct()
     )
 
