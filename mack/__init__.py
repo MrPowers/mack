@@ -4,6 +4,7 @@ from delta import *
 import pyspark
 import pyspark.sql.functions as F
 from pyspark.sql.window import Window
+from pyspark.sql.dataframe import DataFrame
 
 
 class MackValidationError(ValueError):
