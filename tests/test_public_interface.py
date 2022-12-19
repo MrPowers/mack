@@ -406,7 +406,8 @@ def test_append_without_duplicates(tmp_path):
     append_data = spark.createDataFrame(
         [
             (8,"F","G"),
-            (10,"U","V")
+            (10,"U","V"),
+            (2,"R","T")
         ],
         ["col1","col2","col3"]
     )
@@ -424,3 +425,40 @@ def test_append_without_duplicates(tmp_path):
     ]
     expected = spark.createDataFrame(expected_data, ["col1","col2","col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
+
+
+def test_append_without_duplicates_multi_column(tmp_path):
+    path = f"{tmp_path}/append_without_duplicates"
+    data = [
+        (1,"cx","A","B"),
+        (2,"wq","R","T"),
+        (3,"te","X","Y")
+    ]
+    df = spark.createDataFrame(data, ["col1","col2","col3","col4"])
+    df.write.format("delta").save(path)
+
+    deltaTable = DeltaTable.forPath(spark, path)
+
+    append_data = spark.createDataFrame(
+        [
+            (8,"rb","F","G"),
+            (10,"gz","U","V"),
+            (2,"wq","R","T")
+        ],
+        ["col1","col2","col3","col4"]
+    )
+
+    mack.append_without_duplicates(deltaTable,append_data,["col1","col2"])
+
+    appended_data = spark.read.format("delta").load(path)
+
+    expected_data = [
+        (1, "cx", "A", "B"),
+        (2, "wq", "R", "T"),
+        (3, "te", "X", "Y"),
+        (8, "rb", "F", "G"),
+        (10, "gz", "U", "V")
+    ]
+    expected = spark.createDataFrame(expected_data, ["col1","col2","col3","col4"])
+    chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
+
