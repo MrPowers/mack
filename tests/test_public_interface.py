@@ -388,3 +388,39 @@ def test_copy_delta_table(tmp_path):
 
     chispa.assert_df_equality(origin_details, copied_details)
     chispa.assert_df_equality(origin_table.toDF(), copied_table.toDF(), ignore_row_order=True)
+
+
+
+def test_append_without_duplicates(tmp_path):
+    path = f"{tmp_path}/append_without_duplicates"
+    data = [
+        (1,"A","B"),
+        (2,"R","T"),
+        (3,"X","Y")
+    ]
+    df = spark.createDataFrame(data, ["col1","col2","col3"])
+    df.write.format("delta").save(path)
+
+    deltaTable = DeltaTable.forPath(spark, path)
+
+    append_data = spark.createDataFrame(
+        [
+            (8,"F","G"),
+            (10,"U","V")
+        ],
+        ["col1","col2","col3"]
+    )
+
+    mack.append_without_duplicates(deltaTable,append_data,["col1"])
+
+    appended_data = spark.read.format("delta").load(path)
+
+    expected_data = [
+        (1, "A", "B"),
+        (2, "R", "T"),
+        (3, "X", "Y"),
+        (8, "F", "G"),
+        (10, "U", "V")
+    ]
+    expected = spark.createDataFrame(expected_data, ["col1","col2","col3"])
+    chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
