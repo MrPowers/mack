@@ -167,45 +167,48 @@ mack.copy_table(delta_table=deltaTable, target_path=path)
 
 The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the record.
 
-Suppose you have the following table:
+Suppose you have the following Delta table:
 
 ```
-+----+----+----+----+
-|col1|col2|col3|col4|
-+----+----+----+----+
-|   1|  cx|   A|   B|
-|   2|  wq|   R|   T|
-|   5|  te|   X|   Y|
-+----+----+----+----+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   B|
+|   2|   C|   D|
+|   3|   E|   F|
++----+----+----+
 ```
 
-Data to be appended:
+Here is data to be appended:
 
 ```
-+----+----+----+----+
-|col1|col2|col3|col4|
-+----+----+----+----+
-|   8|  rb|   F|   G|
-|   2|  wq|   R|   T|
-|  10|  gz|   U|   V|
-+----+----+----+----+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   2|   R|   T| # duplicate col1
+|   8|   A|   B|
+|  10|   X|   Y|
++----+----+----+
 ```
 
 Run the `append_without_duplicates` function:
 
 ```python
-mack.append_without_duplicates(delta_table=deltaTable,append_data=appendData,p_keys=["col1","col2"])
+mack.append_without_duplicates(deltaTable, append_df, ["col1"])
 ```
 
 Here's the ending result:
 ```
-+----+----+----+----+
-|col1|col2|col3|col4|
-+----+----+----+----+
-|   1|  cx|   A|   B|
-|   2|  wq|   R|   T|
-|   5|  te|   X|   Y|
-|   8|  rb|   F|   G|
-|  10|  gz|   U|   V|
-+----+----+----+----+
+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   B|
+|   2|   C|   D|
+|   3|   E|   F|
+|   8|   A|   B|
+|  10|   X|   Y|
++----+----+----+
 ```
+
+Notice that the duplicate `col1` value was not appended.  If a normal append operation was run, then the Delta table would contain two rows of data with `col1` equal to 2.
