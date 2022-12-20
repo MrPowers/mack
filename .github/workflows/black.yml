@@ -1,4 +1,4 @@
-name: CI workflow
+name: Black format check
 
 on:
   push:
