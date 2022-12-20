@@ -1,7 +1,7 @@
 import pytest
 import chispa
 import pyspark
-from delta import *
+from delta import DeltaTable, configure_spark_with_delta_pip
 from datetime import datetime as dt
 from pyspark.sql.types import (
     StructType,
@@ -57,9 +57,9 @@ def test_upserts_with_single_attribute(tmp_path):
             StructField("effective_time", TimestampType(), True),
         ]
     )
-    updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
+    mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
 
     actual_df = spark.read.format("delta").load(path)
 
@@ -107,10 +107,10 @@ def test_errors_out_if_base_df_does_not_have_all_required_columns(tmp_path):
             StructField("effective_time", TimestampType(), True),
         ]
     )
-    updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    with pytest.raises(mack.MackValidationError) as e_info:
-        mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
+    with pytest.raises(mack.MackValidationError):
+        mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
 
 
 def test_errors_out_if_updates_table_does_not_contain_all_required_columns(tmp_path):
@@ -143,10 +143,10 @@ def test_errors_out_if_updates_table_does_not_contain_all_required_columns(tmp_p
             StructField("effective_time", TimestampType(), True),
         ]
     )
-    updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    with pytest.raises(mack.MackValidationError) as e_info:
-        mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr"])
+    with pytest.raises(mack.MackValidationError):
+        mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
 
 
 def test_upserts_based_on_multiple_attributes(tmp_path):
@@ -181,9 +181,9 @@ def test_upserts_based_on_multiple_attributes(tmp_path):
             StructField("effective_time", TimestampType(), True),
         ]
     )
-    updatesDF = spark.createDataFrame(data=updates_data, schema=updates_schema)
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
+    mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr1", "attr2"])
 
     actual_df = spark.read.format("delta").load(path)
 
@@ -226,7 +226,7 @@ def test_upserts_based_on_date_columns(tmp_path):
     df.write.format("delta").save(path)
 
     # create updates DF
-    updatesDF = spark.createDataFrame(
+    updates_df = spark.createDataFrame(
         [
             (3, "C", dt(2020, 9, 15)),  # new value
             (2, "Z", dt(2020, 1, 1)),  # value to upsert
@@ -234,7 +234,9 @@ def test_upserts_based_on_date_columns(tmp_path):
     ).toDF("pkey", "attr", "effective_date")
 
     # perform upsert
-    mack.type_2_scd_generic_upsert(path, updatesDF, "pkey", ["attr"], "cur", "effective_date", "end_date")
+    mack.type_2_scd_generic_upsert(
+        path, updates_df, "pkey", ["attr"], "cur", "effective_date", "end_date"
+    )
 
     actual_df = spark.read.format("delta").load(path)
 
@@ -276,13 +278,17 @@ def test_upserts_based_on_version_number(tmp_path):
     df.write.format("delta").save(path)
 
     # create updates DF
-    updatesDF = spark.createDataFrame([
-        (2, "Z", 2),  # value to upsert
-        (3, "C", 3),  # new value
-    ]).toDF("pkey", "attr", "effective_ver")
+    updates_df = spark.createDataFrame(
+        [
+            (2, "Z", 2),  # value to upsert
+            (3, "C", 3),  # new value
+        ]
+    ).toDF("pkey", "attr", "effective_ver")
 
     # perform upsert
-    mack.type_2_scd_generic_upsert(path, updatesDF, "pkey", ["attr"], "is_current", "effective_ver", "end_ver")
+    mack.type_2_scd_generic_upsert(
+        path, updates_df, "pkey", ["attr"], "is_current", "effective_ver", "end_ver"
+    )
 
     # show result
     res = spark.read.format("delta").load(path)
@@ -315,9 +321,9 @@ def test_kills_duplicates_in_a_delta_table(tmp_path):
     df = spark.createDataFrame(data, ["col1", "col2", "col3"])
     df.write.format("delta").save(path)
 
-    deltaTable = DeltaTable.forPath(spark, path)
+    delta_table = DeltaTable.forPath(spark, path)
 
-    mack.kill_duplicates(deltaTable, ["col3", "col2"])
+    mack.kill_duplicates(delta_table, ["col3", "col2"])
 
     res = spark.read.format("delta").load(path)
 
@@ -344,9 +350,9 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
     df = spark.createDataFrame(data, ["col1", "col2", "col3", "col4"])
     df.write.format("delta").save(path)
 
-    deltaTable = DeltaTable.forPath(spark, path)
+    delta_table = DeltaTable.forPath(spark, path)
 
-    mack.drop_duplicates(deltaTable, "col1", ["col2", "col3"])
+    mack.drop_duplicates(delta_table, "col1", ["col2", "col3"])
 
     res = spark.read.format("delta").load(path)
 
@@ -370,11 +376,9 @@ def test_copy_delta_table(tmp_path):
     df = spark.createDataFrame(data, ["col1", "col2", "col3"])
 
     (
-        df
-        .write
-        .format("delta")
-        .partitionBy(['col1'])
-        .option('delta.logRetentionDuration', 'interval 30 days')
+        df.write.format("delta")
+        .partitionBy(["col1"])
+        .option("delta.logRetentionDuration", "interval 30 days")
         .save(path)
     )
 
@@ -387,78 +391,81 @@ def test_copy_delta_table(tmp_path):
     copied_details = copied_table.detail().select("partitionColumns", "properties")
 
     chispa.assert_df_equality(origin_details, copied_details)
-    chispa.assert_df_equality(origin_table.toDF(), copied_table.toDF(), ignore_row_order=True)
-
-
-
-def test_append_without_duplicates(tmp_path):
-    path = f"{tmp_path}/append_without_duplicates"
-    data = [
-        (1,"A","B"),
-        (2,"R","T"),
-        (3,"X","Y")
-    ]
-    df = spark.createDataFrame(data, ["col1","col2","col3"])
-    df.write.format("delta").save(path)
-
-    deltaTable = DeltaTable.forPath(spark, path)
-
-    append_data = spark.createDataFrame(
-        [
-            (8,"F","G"),
-            (10,"U","V"),
-            (2,"R","T")
-        ],
-        ["col1","col2","col3"]
+    chispa.assert_df_equality(
+        origin_table.toDF(), copied_table.toDF(), ignore_row_order=True
     )
 
-    mack.append_without_duplicates(deltaTable,append_data,["col1"])
+
+# append without duplicates
+def test_append_without_duplicates_single_column(tmp_path):
+    path = f"{tmp_path}/append_without_duplicates"
+    data = [
+        (1, "A", "B"),
+        (2, "C", "D"),
+        (3, "E", "F"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    append_df = spark.createDataFrame(
+        [
+            (2, "R", "T"),  # duplicate
+            (8, "A", "B"),
+            (10, "X", "Y"),
+        ],
+        ["col1", "col2", "col3"],
+    )
+
+    mack.append_without_duplicates(delta_table, append_df, ["col1"])
 
     appended_data = spark.read.format("delta").load(path)
 
     expected_data = [
         (1, "A", "B"),
-        (2, "R", "T"),
-        (3, "X", "Y"),
-        (8, "F", "G"),
-        (10, "U", "V")
+        (2, "C", "D"),
+        (3, "E", "F"),
+        (8, "A", "B"),
+        (10, "X", "Y"),
     ]
-    expected = spark.createDataFrame(expected_data, ["col1","col2","col3"])
+    expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
 
 
 def test_append_without_duplicates_multi_column(tmp_path):
     path = f"{tmp_path}/append_without_duplicates"
     data = [
-        (1,"cx","A","B"),
-        (2,"wq","R","T"),
-        (3,"te","X","Y")
+        (1, "a", "A"),
+        (2, "b", "R"),
+        (3, "c", "X"),
     ]
-    df = spark.createDataFrame(data, ["col1","col2","col3","col4"])
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
     df.write.format("delta").save(path)
 
-    deltaTable = DeltaTable.forPath(spark, path)
+    delta_table = DeltaTable.forPath(spark, path)
 
     append_data = spark.createDataFrame(
         [
-            (8,"rb","F","G"),
-            (10,"gz","U","V"),
-            (2,"wq","R","T")
+            (2, "b", "R"),  # duplicate col1, col2
+            (2, "x", "R"),  # NOT duplicate col1, col2
+            (8, "y", "F"),
+            (10, "z", "U"),
         ],
-        ["col1","col2","col3","col4"]
+        ["col1", "col2", "col3"],
     )
 
-    mack.append_without_duplicates(deltaTable,append_data,["col1","col2"])
+    mack.append_without_duplicates(delta_table, append_data, ["col1", "col2"])
 
     appended_data = spark.read.format("delta").load(path)
 
     expected_data = [
-        (1, "cx", "A", "B"),
-        (2, "wq", "R", "T"),
-        (3, "te", "X", "Y"),
-        (8, "rb", "F", "G"),
-        (10, "gz", "U", "V")
+        (1, "a", "A"),
+        (2, "b", "R"),
+        (2, "x", "R"),
+        (3, "c", "X"),
+        (8, "y", "F"),
+        (10, "z", "U"),
     ]
-    expected = spark.createDataFrame(expected_data, ["col1","col2","col3","col4"])
+    expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
-
