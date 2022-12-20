@@ -1,8 +1,8 @@
 from typing import List
 
-from delta import *
+from delta import DeltaTable
 import pyspark
-import pyspark.sql.functions as F
+from pyspark.sql.functions import count, col, row_number
 from pyspark.sql.window import Window
 from pyspark.sql.dataframe import DataFrame
 
@@ -11,12 +11,12 @@ class MackValidationError(ValueError):
     """raise this when there's a Mack validation error"""
 
 
-def type_2_scd_upsert(path, updates_df, primaryKey, attrColNames):
+def type_2_scd_upsert(path, updates_df, primary_key, attr_col_names):
     return type_2_scd_generic_upsert(
         path,
         updates_df,
-        primaryKey,
-        attrColNames,
+        primary_key,
+        attr_col_names,
         "is_current",
         "effective_time",
         "end_time",
@@ -24,65 +24,75 @@ def type_2_scd_upsert(path, updates_df, primaryKey, attrColNames):
 
 
 def type_2_scd_generic_upsert(
-        path,
-        updates_df,
-        primaryKey,
-        attrColNames,
-        isCurrentColName,
-        effectiveTimeColName,
-        endTimeColName,
+    path,
+    updates_df,
+    primary_key,
+    attr_col_names,
+    is_current_col_name,
+    effective_time_col_name,
+    end_time_col_name,
 ):
-    baseTable = DeltaTable.forPath(pyspark.sql.SparkSession.getActiveSession(), path)
+    base_table = DeltaTable.forPath(pyspark.sql.SparkSession.getActiveSession(), path)
     # validate the existing Delta table
-    baseColNames = baseTable.toDF().columns
-    requiredBaseColNames = [primaryKey] + attrColNames + [isCurrentColName, effectiveTimeColName, endTimeColName]
-    if sorted(baseColNames) != sorted(requiredBaseColNames):
+    base_col_names = base_table.toDF().columns
+    required_base_col_names = (
+        [primary_key]
+        + attr_col_names
+        + [is_current_col_name, effective_time_col_name, end_time_col_name]
+    )
+    if sorted(base_col_names) != sorted(required_base_col_names):
         raise MackValidationError(
-            f"The base table has these columns '{baseColNames}', but these columns are required '{requiredBaseColNames}'"
+            f"The base table has these columns '{base_col_names}', but these columns are required '{required_base_col_names}'"
         )
     # validate the updates DataFrame
-    updatesColNames = updates_df.columns
-    requiredUpdatesColNames = [primaryKey] + attrColNames + [effectiveTimeColName]
-    if sorted(updatesColNames) != sorted(requiredUpdatesColNames):
+    updates_col_names = updates_df.columns
+    required_updates_col_names = (
+        [primary_key] + attr_col_names + [effective_time_col_name]
+    )
+    if sorted(updates_col_names) != sorted(required_updates_col_names):
         raise MackValidationError(
-            f"The updates DataFrame has these columns '{updatesColNames}', but these columns are required '{requiredUpdatesColNames}'"
+            f"The updates DataFrame has these columns '{updates_col_names}', but these columns are required '{required_updates_col_names}'"
         )
 
     # perform the upsert
-    updatesAttrs = list(map(lambda attr: f"updates.{attr} <> base.{attr}", attrColNames))
-    updatesAttrs = " OR ".join(updatesAttrs)
-    stagedUpdatesAttrs = list(map(lambda attr: f"staged_updates.{attr} <> base.{attr}", attrColNames))
-    stagedUpdatesAttrs = " OR ".join(stagedUpdatesAttrs)
-    stagedPart1 = (
+    updates_attrs = list(
+        map(lambda attr: f"updates.{attr} <> base.{attr}", attr_col_names)
+    )
+    updates_attrs = " OR ".join(updates_attrs)
+    staged_updates_attrs = list(
+        map(lambda attr: f"staged_updates.{attr} <> base.{attr}", attr_col_names)
+    )
+    staged_updates_attrs = " OR ".join(staged_updates_attrs)
+    staged_part_1 = (
         updates_df.alias("updates")
-        .join(baseTable.toDF().alias("base"), primaryKey)
-        .where(f"base.{isCurrentColName} = true AND ({updatesAttrs})")
+        .join(base_table.toDF().alias("base"), primary_key)
+        .where(f"base.{is_current_col_name} = true AND ({updates_attrs})")
         .selectExpr("NULL as mergeKey", "updates.*")
     )
-    stagedPart2 = updates_df.selectExpr(f"{primaryKey} as mergeKey", "*")
-    stagedUpdates = stagedPart1.union(stagedPart2)
+    staged_part_2 = updates_df.selectExpr(f"{primary_key} as mergeKey", "*")
+    staged_updates = staged_part_1.union(staged_part_2)
     thing = {}
-    for attr in attrColNames:
+    for attr in attr_col_names:
         thing[attr] = f"staged_updates.{attr}"
     thing2 = {
-        primaryKey: f"staged_updates.{primaryKey}",
-        isCurrentColName: "true",
-        effectiveTimeColName: f"staged_updates.{effectiveTimeColName}",
-        endTimeColName: "null",
+        primary_key: f"staged_updates.{primary_key}",
+        is_current_col_name: "true",
+        effective_time_col_name: f"staged_updates.{effective_time_col_name}",
+        end_time_col_name: "null",
     }
     res_thing = {**thing, **thing2}
     res = (
-        baseTable.alias("base")
+        base_table.alias("base")
         .merge(
-            source=stagedUpdates.alias("staged_updates"),
+            source=staged_updates.alias("staged_updates"),
             condition=pyspark.sql.functions.expr(
-                f"base.{primaryKey} = mergeKey AND base.{isCurrentColName} = true AND ({stagedUpdatesAttrs})"
+                f"base.{primary_key} = mergeKey AND base.{is_current_col_name} = true AND ({staged_updates_attrs})"
             ),
         )
         .whenMatchedUpdate(
             set={
-                isCurrentColName: "false",
-                endTimeColName: f"staged_updates.{effectiveTimeColName}",
+                is_current_col_name: "false",
+                end_time_col_name: f"staged_updates.{effective_time_col_name}",
             }
         )
         .whenNotMatchedInsert(values=res_thing)
@@ -111,9 +121,11 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
     q = []
 
     duplicate_records = (
-        data_frame
-        .withColumn("amount_of_records", F.count("*").over(Window.partitionBy(duplication_columns)))
-        .filter(F.col("amount_of_records") > 1)
+        data_frame.withColumn(
+            "amount_of_records",
+            count("*").over(Window.partitionBy(duplication_columns)),
+        )
+        .filter(col("amount_of_records") > 1)
         .drop("amount_of_records")
         .distinct()
     )
@@ -129,7 +141,9 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
     ).whenMatchedDelete().execute()
 
 
-def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_columns: List[str] = None):
+def drop_duplicates(
+    delta_table: DeltaTable, primary_key: str, duplication_columns: List[str] = None
+):
     if not delta_table:
         raise Exception("An existing delta table must be specified.")
 
@@ -158,9 +172,13 @@ def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_colum
     # Get all the duplicate records
     if len(duplication_columns) > 0:
         duplicate_records = (
-            data_frame
-            .withColumn("row_number", F.row_number().over(Window().partitionBy(duplication_columns).orderBy(primary_key)))
-            .filter(F.col("row_number") > 1)
+            data_frame.withColumn(
+                "row_number",
+                row_number().over(
+                    Window().partitionBy(duplication_columns).orderBy(primary_key)
+                ),
+            )
+            .filter(col("row_number") > 1)
             .drop("row_number")
             .distinct()
         )
@@ -169,9 +187,13 @@ def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_colum
 
     else:
         duplicate_records = (
-            data_frame
-            .withColumn("row_number", F.row_number().over(Window().partitionBy(primary_key).orderBy(primary_key)))
-            .filter(F.col("row_number") > 1)
+            data_frame.withColumn(
+                "row_number",
+                row_number().over(
+                    Window().partitionBy(primary_key).orderBy(primary_key)
+                ),
+            )
+            .filter(col("row_number") > 1)
             .drop("row_number")
             .distinct()
         )
@@ -187,7 +209,9 @@ def drop_duplicates(delta_table: DeltaTable, primary_key: str, duplication_colum
     ).whenMatchedDelete().execute()
 
 
-def copy_table(delta_table: DeltaTable, target_path: str = None, target_table: str = None):
+def copy_table(
+    delta_table: DeltaTable, target_path: str = None, target_table: str = None
+):
     if not delta_table:
         raise Exception("An existing delta table must be specified.")
 
@@ -196,35 +220,27 @@ def copy_table(delta_table: DeltaTable, target_path: str = None, target_table: s
 
     origin_table = delta_table.toDF()
 
-    details = (
-        delta_table
-        .detail()
-        .select("partitionColumns", "properties")
-        .collect()[0]
-    )
+    details = delta_table.detail().select("partitionColumns", "properties").collect()[0]
 
     if target_table:
         (
-            origin_table
-            .write.format("delta")
+            origin_table.write.format("delta")
             .partitionBy(details["partitionColumns"])
             .options(**details["properties"])
             .saveAsTable(target_table)
         )
     else:
         (
-            origin_table
-            .write
-            .format("delta")
+            origin_table.write.format("delta")
             .partitionBy(details["partitionColumns"])
             .options(**details["properties"])
             .save(target_path)
         )
 
-        
 
-
-def append_without_duplicates(delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None):
+def append_without_duplicates(
+    delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None
+):
     if not delta_table:
         raise Exception("An existing delta table must be specified.")
 
@@ -236,6 +252,5 @@ def append_without_duplicates(delta_table: DeltaTable, append_data: DataFrame, p
 
     # Insert records without duplicates
     delta_table.alias("old").merge(
-        append_data.alias("new"),
-        condition_columns
+        append_data.alias("new"), condition_columns
     ).whenNotMatchedInsertAll().execute()
