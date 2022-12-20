@@ -4,6 +4,7 @@ from delta import *
 import pyspark
 import pyspark.sql.functions as F
 from pyspark.sql.window import Window
+from pyspark.sql.dataframe import DataFrame
 
 
 class MackValidationError(ValueError):
@@ -219,3 +220,22 @@ def copy_table(delta_table: DeltaTable, target_path: str = None, target_table: s
             .options(**details["properties"])
             .save(target_path)
         )
+
+        
+
+
+def append_without_duplicates(delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None):
+    if not delta_table:
+        raise Exception("An existing delta table must be specified.")
+
+    condition_columns = []
+    for column in p_keys:
+        condition_columns.append(f"old.{column} = new.{column}")
+
+    condition_columns = " AND ".join(condition_columns)
+
+    # Insert records without duplicates
+    delta_table.alias("old").merge(
+        append_data.alias("new"),
+        condition_columns
+    ).whenNotMatchedInsertAll().execute()
