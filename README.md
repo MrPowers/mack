@@ -162,4 +162,3 @@ Here's how to perform the copy:
 ```python
 mack.copy_table(delta_table=deltaTable, target_path=path)
 ```
-
