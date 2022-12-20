@@ -215,7 +215,7 @@ Notice that the duplicate `col1` value was not appended.  If a normal append ope
 
 ## Delta File Sizes
 
-The `delta_file_sizes` function prints the amount of files and the average file size for a delta table.
+The `delta_file_sizes` function prints the amount of files and the average file size for a given Delta Table.
 
 Suppose you have the following Delta Table, partitioned by `col1`:
 
@@ -230,4 +230,4 @@ Suppose you have the following Delta Table, partitioned by `col1`:
 
 Running `mack.delta_file_sizes(delta_table)` on that table will print:
 
-`The delta table contains 2 files. The average file size in bytes is 660.0`
+`This Delta Table contains 2 files. The average file size in bytes is 660.0`
