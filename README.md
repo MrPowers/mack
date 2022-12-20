@@ -212,3 +212,22 @@ Here's the ending result:
 ```
 
 Notice that the duplicate `col1` value was not appended.  If a normal append operation was run, then the Delta table would contain two rows of data with `col1` equal to 2.
+
+## Delta File Sizes
+
+The `delta_file_sizes` function prints the amount of files and the average file size for a delta table.
+
+Suppose you have the following Delta Table, partitioned by `col1`:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   A|   B|
++----+----+----+
+```
+
+Running `mack.delta_file_sizes(delta_table)` on that table will print:
+
+`The delta table contains 2 files. The average file size in bytes is 660.0`
