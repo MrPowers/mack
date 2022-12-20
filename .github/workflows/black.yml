@@ -14,5 +14,5 @@ jobs:
       - name: Black Code Formatter Check
         uses: RojerGS/python-black-check@master
         with:
-          line-length: '10'
+          line-length: '88'
           path: 'mack'
