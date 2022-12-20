@@ -163,7 +163,6 @@ Here's how to perform the copy:
 mack.copy_table(delta_table=deltaTable, target_path=path)
 ```
 
-
 ## Append data without duplicates
 
 The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the record.
@@ -200,6 +199,7 @@ mack.append_without_duplicates(deltaTable, append_df, ["col1"])
 
 Here's the ending result:
 ```
+
 +----+----+----+
 |col1|col2|col3|
 +----+----+----+
