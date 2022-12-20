@@ -469,3 +469,30 @@ def test_append_without_duplicates_multi_column(tmp_path):
     ]
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
+
+
+def test_describe_table(capfd, tmp_path):
+    path = f"{tmp_path}/copy_test_1"
+    data = [
+        (1, "A", "A"),
+        (2, "A", "B"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    (
+        df.write.format("delta")
+        .partitionBy(["col1"])
+        .option("delta.logRetentionDuration", "interval 30 days")
+        .save(path)
+    )
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    mack.delta_file_sizes(delta_table)
+
+    out, _ = capfd.readouterr()
+
+    assert (
+        out
+        == "The delta table contains 2 files. The average file size in bytes is 660.0\n"
+    )

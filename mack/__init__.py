@@ -254,3 +254,13 @@ def append_without_duplicates(
     delta_table.alias("old").merge(
         append_data.alias("new"), condition_columns
     ).whenNotMatchedInsertAll().execute()
+
+
+def delta_file_sizes(delta_table: DeltaTable):
+    details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
+    total_file_size, number_of_files = details["sizeInBytes"], details["numFiles"]
+    average_file_size = round(total_file_size / number_of_files, 0)
+
+    print(
+        f"The delta table contains {number_of_files} files. The average file size in bytes is {average_file_size}"
+    )
