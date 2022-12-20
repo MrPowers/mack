@@ -2,8 +2,6 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v3.2.0
     hooks:
-      - id: detect-aws-credentials
-      - id: detect-private-key
       - id: check-added-large-files
       - id: check-ast
       - id: check-byte-order-marker
