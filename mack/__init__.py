@@ -262,5 +262,5 @@ def delta_file_sizes(delta_table: DeltaTable):
     average_file_size = round(total_file_size / number_of_files, 0)
 
     print(
-        f"The delta table contains {number_of_files} files. The average file size in bytes is {average_file_size}"
+        f"This Delta Table contains {number_of_files} files. The average file size in bytes is {average_file_size}"
     )

@@ -494,5 +494,5 @@ def test_describe_table(capfd, tmp_path):
 
     assert (
         out
-        == "The delta table contains 2 files. The average file size in bytes is 660.0\n"
+        == "This Delta Table contains 2 files. The average file size in bytes is 660.0\n"
     )
