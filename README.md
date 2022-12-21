@@ -1,5 +1,10 @@
 # mack
 
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/ci.yml/badge.svg)
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/black.yml/badge.svg)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/mack)
+[![PyPI version](https://badge.fury.io/py/mack.svg)](https://badge.fury.io/py/mack)
+
 mack provides a variety of helper methods that make it easy for you to perform common Delta Lake operations.
 
 ![mack](https://github.com/MrPowers/mack/blob/main/images/mack.jpg)
