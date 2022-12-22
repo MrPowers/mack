@@ -1,4 +1,4 @@
-name: Black format check
+name: Flake8 check
 
 on:
   push:
