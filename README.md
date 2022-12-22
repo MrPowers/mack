@@ -1,5 +1,10 @@
 # mack
 
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/ci.yml/badge.svg)
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/black.yml/badge.svg)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/mack)
+[![PyPI version](https://badge.fury.io/py/mack.svg)](https://badge.fury.io/py/mack)
+
 mack provides a variety of helper methods that make it easy for you to perform common Delta Lake operations.
 
 ![mack](https://github.com/MrPowers/mack/blob/main/images/mack.jpg)
@@ -92,7 +97,7 @@ Suppose you have the following table:
 Run the `kill_duplicates` function:
 
 ```python
-mack.kill_duplicates(deltaTable, "col1", ["col2", "col3"])
+mack.kill_duplicates(deltaTable, ["col2", "col3"])
 ```
 
 Here's the ending state of the table:
@@ -163,3 +168,52 @@ Here's how to perform the copy:
 mack.copy_table(delta_table=deltaTable, target_path=path)
 ```
 
+## Append data without duplicates
+
+The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the record.
+
+Suppose you have the following Delta table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   B|
+|   2|   C|   D|
+|   3|   E|   F|
++----+----+----+
+```
+
+Here is data to be appended:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   2|   R|   T| # duplicate col1
+|   8|   A|   B|
+|  10|   X|   Y|
++----+----+----+
+```
+
+Run the `append_without_duplicates` function:
+
+```python
+mack.append_without_duplicates(deltaTable, append_df, ["col1"])
+```
+
+Here's the ending result:
+```
+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   B|
+|   2|   C|   D|
+|   3|   E|   F|
+|   8|   A|   B|
+|  10|   X|   Y|
++----+----+----+
+```
+
+Notice that the duplicate `col1` value was not appended.  If a normal append operation was run, then the Delta table would contain two rows of data with `col1` equal to 2.
