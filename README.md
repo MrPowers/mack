@@ -155,7 +155,7 @@ Here's the ending state of the table:
 ## Drop duplicates
 
 The `drop_duplicates` function removes all but one duplicate row from a Delta table. It behaves exactly like the `drop_duplicates` DataFrame API.
-**Warning:** This method is overwriting the whole table, thus very inefficient. If you can, use the `drop_duplicates_pkey` method.
+**Warning:** This method is overwriting the whole table, thus very inefficient. If you can, use the `drop_duplicates_pkey` method instead.
 
 Suppose you have the following table:
 
