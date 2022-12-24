@@ -141,20 +141,22 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
     ).whenMatchedDelete().execute()
 
 
-def drop_duplicates(
-    delta_table: DeltaTable, primary_key: str, duplication_columns: List[str] = None
+def drop_duplicates_pkey(
+    delta_table: DeltaTable, primary_key: str, duplication_columns: List[str]
 ):
     if not delta_table:
-        raise Exception("An existing delta table must be specified.")
+        raise MackValidationError("An existing delta table must be specified.")
 
     if not primary_key:
-        raise Exception("A primary key must be specified.")
+        raise MackValidationError("A unique primary key must be specified.")
 
-    if not duplication_columns:
-        duplication_columns = []
+    if not duplication_columns or len(duplication_columns) == 0:
+        raise MackValidationError("A duplication column must be specified.")
 
     if primary_key in duplication_columns:
-        raise Exception("Primary key must not be part of the duplication columns.")
+        raise MackValidationError(
+            "Primary key must not be part of the duplication columns."
+        )
 
     data_frame = delta_table.toDF()
 
@@ -207,6 +209,25 @@ def drop_duplicates(
     delta_table.alias("old").merge(
         duplicate_records.alias("new"), q
     ).whenMatchedDelete().execute()
+
+
+def drop_duplicates(delta_table: DeltaTable, duplication_columns: List[str]):
+    if not delta_table:
+        raise MackValidationError("An existing delta table must be specified.")
+
+    if not duplication_columns or len(duplication_columns) == 0:
+        raise MackValidationError("A duplication column must be specified.")
+
+    data_frame = delta_table.toDF()
+
+    details = delta_table.detail().select("location").collect()[0]
+
+    (
+        data_frame.drop_duplicates(duplication_columns)
+        .write.format("delta")
+        .mode("overwrite")
+        .save(details["location"])
+    )
 
 
 def copy_table(
