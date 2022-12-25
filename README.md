@@ -280,3 +280,23 @@ Running `mack.delta_file_sizes(delta_table)` on that table will return:
 `{"size_in_bytes": 1320,
 "number_of_files": 2,
 "average_file_size_in_bites": 660}`
+
+
+## Is Col Unique
+
+The `is_col_unique` function returns a boolean that indicates whether a set of columns are unique or not.
+
+Suppose you have the following Delta Table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   B|   B|
+|   2|   C|   B|
++----+----+----+
+```
+
+Running `mack.is_col_unique(delta_table, ["col1"])` on that table will return `False`.
+Running `mack.is_col_unique(delta_table, ["col1", "col2"])` on that table will return `True`.

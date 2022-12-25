@@ -513,6 +513,24 @@ def test_append_without_duplicates_multi_column(tmp_path):
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
 
 
+def test_is_col_unique(tmp_path):
+    path = f"{tmp_path}/is_col_unique"
+    data = [
+        (1, "a", "A"),
+        (2, "b", "R"),
+        (2, "c", "D"),
+        (3, "e", "F"),
+    ]
+
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    assert not mack.is_col_unique(delta_table, ["col1"])
+    assert mack.is_col_unique(delta_table, ["col1", "col2"])
+
+
 def test_describe_table(tmp_path):
     path = f"{tmp_path}/copy_test_1"
     data = [
@@ -542,7 +560,7 @@ def test_describe_table(tmp_path):
 
 
 def test_humanize_bytes_formats_nicely():
-    assert(mack.humanize_bytes(12345678) == "12.35 MB")
-    assert(mack.humanize_bytes(1234567890) == "1.23 GB")
-    assert(mack.humanize_bytes(1234567890000) == "1.23 TB")
-    assert(mack.humanize_bytes(1234567890000000) == "1.23 PB")
+    assert mack.humanize_bytes(12345678) == "12.35 MB"
+    assert mack.humanize_bytes(1234567890) == "1.23 GB"
+    assert mack.humanize_bytes(1234567890000) == "1.23 TB"
+    assert mack.humanize_bytes(1234567890000000) == "1.23 PB"
