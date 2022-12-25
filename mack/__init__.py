@@ -277,6 +277,18 @@ def append_without_duplicates(
     ).whenNotMatchedInsertAll().execute()
 
 
+def delta_file_sizes(delta_table: DeltaTable):
+    details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
+    size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
+    average_file_size_in_bites = round(size_in_bytes / number_of_files, 0)
+
+    return {
+        "size_in_bytes": size_in_bytes,
+        "number_of_files": number_of_files,
+        "average_file_size_in_bites": average_file_size_in_bites,
+    }
+
+
 def humanize_bytes(n: int) -> str:
     for prefix, k in (
         ("PB", 1e15),

@@ -512,7 +512,35 @@ def test_append_without_duplicates_multi_column(tmp_path):
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
 
-# humanize bytes
+
+def test_describe_table(tmp_path):
+    path = f"{tmp_path}/copy_test_1"
+    data = [
+        (1, "A", "A"),
+        (2, "A", "B"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    (
+        df.write.format("delta")
+        .partitionBy(["col1"])
+        .option("delta.logRetentionDuration", "interval 30 days")
+        .save(path)
+    )
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    result = mack.delta_file_sizes(delta_table)
+
+    expected_result = {
+        "size_in_bytes": 1320,
+        "number_of_files": 2,
+        "average_file_size_in_bites": 660,
+    }
+
+    assert result == expected_result
+
+
 def test_humanize_bytes_formats_nicely():
     assert(mack.humanize_bytes(12345678) == "12.35 MB")
     assert(mack.humanize_bytes(1234567890) == "1.23 GB")
