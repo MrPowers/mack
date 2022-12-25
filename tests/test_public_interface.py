@@ -336,8 +336,8 @@ def test_kills_duplicates_in_a_delta_table(tmp_path):
     chispa.assert_df_equality(res, expected, ignore_row_order=True)
 
 
-def test_drop_duplicates_in_a_delta_table(tmp_path):
-    path = f"{tmp_path}/drop_duplicates"
+def test_drop_duplicates_pkey_in_a_delta_table(tmp_path):
+    path = f"{tmp_path}/drop_duplicates_pkey"
     data = [
         (1, "A", "A", "C"),  # duplicate
         (2, "A", "B", "C"),
@@ -352,7 +352,7 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    mack.drop_duplicates(delta_table, "col1", ["col2", "col3"])
+    mack.drop_duplicates_pkey(delta_table, "col1", ["col2", "col3"])
 
     res = spark.read.format("delta").load(path)
 
@@ -367,7 +367,24 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
     chispa.assert_df_equality(res, expected, ignore_row_order=True)
 
 
-def test_drop_duplicates_in_a_delta_table_no_cols(tmp_path):
+def test_drop_duplicates_pkey_in_a_delta_table_no_duplication_cols(tmp_path):
+    path = f"{tmp_path}/drop_duplicates_pkey_no_duplication_cols"
+    data = [
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3", "col4"])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    with pytest.raises(mack.MackValidationError):
+        mack.drop_duplicates_pkey(delta_table, "col1")
+
+
+def test_drop_duplicates_in_a_delta_table(tmp_path):
     path = f"{tmp_path}/drop_duplicates"
     data = [
         (1, "A", "A", "C"),  # duplicate
@@ -378,9 +395,9 @@ def test_drop_duplicates_in_a_delta_table_no_cols(tmp_path):
     df = spark.createDataFrame(data, ["col1", "col2", "col3", "col4"])
     df.write.format("delta").save(path)
 
-    deltaTable = DeltaTable.forPath(spark, path)
+    delta_table = DeltaTable.forPath(spark, path)
 
-    mack.drop_duplicates(deltaTable, "col1"),
+    mack.drop_duplicates(delta_table, ["col1"]),
 
     res = spark.read.format("delta").load(path)
 
