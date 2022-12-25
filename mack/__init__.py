@@ -275,3 +275,16 @@ def append_without_duplicates(
     delta_table.alias("old").merge(
         append_data.alias("new"), condition_columns
     ).whenNotMatchedInsertAll().execute()
+
+
+def humanize_bytes(n: int) -> str:
+    for prefix, k in (
+        ("PB", 1e15),
+        ("TB", 1e12),
+        ("GB", 1e9),
+        ("MB", 1e6),
+        ("kB", 1e3),
+    ):
+        if n >= k * 0.9:
+            return f"{n / k:.2f} {prefix}"
+    return f"{n} B"
