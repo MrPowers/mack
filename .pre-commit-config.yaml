@@ -28,3 +28,10 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies: [flake8-bugbear, Flake8-pyproject, pep8-naming]
+  - repo: local
+    hooks:
+    - id: pytest
+      name: pytest
+      entry: pytest tests/
+      pass_filenames: false
+      language: system

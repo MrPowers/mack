@@ -381,7 +381,7 @@ def test_drop_duplicates_pkey_in_a_delta_table_no_duplication_cols(tmp_path):
     delta_table = DeltaTable.forPath(spark, path)
 
     with pytest.raises(mack.MackValidationError):
-        mack.drop_duplicates_pkey(delta_table, "col1")
+        mack.drop_duplicates_pkey(delta_table, "col1", [])
 
 
 def test_drop_duplicates_in_a_delta_table(tmp_path):
