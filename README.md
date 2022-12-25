@@ -1,5 +1,10 @@
 # mack
 
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/ci.yml/badge.svg)
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/black.yml/badge.svg)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/mack)
+[![PyPI version](https://badge.fury.io/py/mack.svg)](https://badge.fury.io/py/mack)
+
 mack provides a variety of helper methods that make it easy for you to perform common Delta Lake operations.
 
 ![mack](https://github.com/MrPowers/mack/blob/main/images/mack.jpg)
@@ -107,9 +112,11 @@ Here's the ending state of the table:
 +----+----+----+
 ```
 
-## Drop duplicates
+## Drop duplicates with Primary Key
 
-The `drop_duplicates` function removes all but one duplicate row from a Delta table.
+The `drop_duplicates_pkey` function removes all but one duplicate row from a Delta table.
+**Warning:** You have to provide a primary column that **must contain unique values**, otherwise the method will default to kill the duplicates.
+If you can not provide a unique primary key, you can use the `drop_duplicates` method.
 
 Suppose you have the following table:
 
@@ -130,7 +137,7 @@ Suppose you have the following table:
 Run the `drop_duplicates` function:
 
 ```python
-mack.drop_duplicates(delta_table=deltaTable, primary_key="col1", duplication_columns=["col2", "col3"])
+mack.drop_duplicates_pkey(delta_table=deltaTable, primary_key="col1", duplication_columns=["col2", "col3"])
 ```
 
 Here's the ending state of the table:
@@ -143,6 +150,40 @@ Here's the ending state of the table:
 |   2|   A|   B|   C|
 |   5|   B|   B|   C|
 |   6|   D|   D|   C|
++----+----+----+----+
+```
+
+## Drop duplicates
+
+The `drop_duplicates` function removes all but one duplicate row from a Delta table. It behaves exactly like the `drop_duplicates` DataFrame API.
+**Warning:** This method is overwriting the whole table, thus very inefficient. If you can, use the `drop_duplicates_pkey` method instead.
+
+Suppose you have the following table:
+
+```
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   1|   A|   A|   C| # duplicate
+|   1|   A|   A|   C| # duplicate
+|   2|   A|   A|   C|
++----+----+----+----+
+```
+
+Run the `drop_duplicates` function:
+
+```python
+mack.drop_duplicates_pkey(delta_table=deltaTable, duplication_columns=["col1"])
+```
+
+Here's the ending state of the table:
+
+```
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   1|   A|   A|   C| # duplicate
+|   2|   A|   A|   C| # duplicate
 +----+----+----+----+
 ```
 
