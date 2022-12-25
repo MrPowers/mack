@@ -511,3 +511,10 @@ def test_append_without_duplicates_multi_column(tmp_path):
     ]
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
+
+# humanize bytes
+def test_humanize_bytes_formats_nicely():
+    assert(mack.humanize_bytes(12345678) == "12.35 MB")
+    assert(mack.humanize_bytes(1234567890) == "1.23 GB")
+    assert(mack.humanize_bytes(1234567890000) == "1.23 TB")
+    assert(mack.humanize_bytes(1234567890000000) == "1.23 PB")
