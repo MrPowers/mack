@@ -471,7 +471,7 @@ def test_append_without_duplicates_multi_column(tmp_path):
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
 
 
-def test_describe_table(capfd, tmp_path):
+def test_describe_table(tmp_path):
     path = f"{tmp_path}/copy_test_1"
     data = [
         (1, "A", "A"),
@@ -488,11 +488,12 @@ def test_describe_table(capfd, tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    mack.delta_file_sizes(delta_table)
+    result = mack.delta_file_sizes(delta_table)
 
-    out, _ = capfd.readouterr()
+    expected_result = {
+        "size_in_bytes": 1320,
+        "number_of_files": 2,
+        "average_file_size_in_bites": 660,
+    }
 
-    assert (
-        out
-        == "This Delta Table contains 2 files. The average file size in bytes is 660.0\n"
-    )
+    assert result == expected_result
