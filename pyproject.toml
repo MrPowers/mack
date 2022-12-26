@@ -7,6 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+flake8 = "^6.0.0"
+flake8-bugbear = "^22.12.6"
+flake8-pyproject = "^1.2.2"
+pep8-naming = "^0.13.3"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.20.0"
