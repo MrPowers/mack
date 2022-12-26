@@ -23,7 +23,8 @@ mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
 
 ## Type 2 SCD Upserts
 
-This library provides an opinionated, conventions over configuration, approach to Type 2 SCD management.  Let's look at an example before covering the conventions required to take advantage of the functionality.
+This library provides an opinionated, conventions over configuration, approach to Type 2 SCD management. Let's look at an example before
+covering the conventions required to take advantage of the functionality.
 
 Suppose you have the following SCD table with the `pkey` primary key:
 
@@ -111,9 +112,11 @@ Here's the ending state of the table:
 +----+----+----+
 ```
 
-## Drop duplicates
+## Drop duplicates with Primary Key
 
-The `drop_duplicates` function removes all but one duplicate row from a Delta table.
+The `drop_duplicates_pkey` function removes all but one duplicate row from a Delta table.
+**Warning:** You have to provide a primary column that **must contain unique values**, otherwise the method will default to kill the duplicates.
+If you can not provide a unique primary key, you can use the `drop_duplicates` method.
 
 Suppose you have the following table:
 
@@ -134,7 +137,7 @@ Suppose you have the following table:
 Run the `drop_duplicates` function:
 
 ```python
-mack.drop_duplicates(delta_table=deltaTable, primary_key="col1", duplication_columns=["col2", "col3"])
+mack.drop_duplicates_pkey(delta_table=deltaTable, primary_key="col1", duplication_columns=["col2", "col3"])
 ```
 
 Here's the ending state of the table:
@@ -150,6 +153,40 @@ Here's the ending state of the table:
 +----+----+----+----+
 ```
 
+## Drop duplicates
+
+The `drop_duplicates` function removes all but one duplicate row from a Delta table. It behaves exactly like the `drop_duplicates` DataFrame API.
+**Warning:** This method is overwriting the whole table, thus very inefficient. If you can, use the `drop_duplicates_pkey` method instead.
+
+Suppose you have the following table:
+
+```
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   1|   A|   A|   C| # duplicate
+|   1|   A|   A|   C| # duplicate
+|   2|   A|   A|   C|
++----+----+----+----+
+```
+
+Run the `drop_duplicates` function:
+
+```python
+mack.drop_duplicates_pkey(delta_table=deltaTable, duplication_columns=["col1"])
+```
+
+Here's the ending state of the table:
+
+```
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   1|   A|   A|   C| # duplicate
+|   2|   A|   A|   C| # duplicate
++----+----+----+----+
+```
+
 ## Copy table
 
 The `copy_table` function copies an existing Delta table.
@@ -160,7 +197,8 @@ Copying includes:
 * Partitioning
 * Table properties
 
-Copying **does not** include the delta log, which means that you will not be able to restore the new table to an old version of the original table.
+Copying **does not** include the delta log, which means that you will not be able to restore the new table to an old version of the original
+table.
 
 Here's how to perform the copy:
 
@@ -170,7 +208,8 @@ mack.copy_table(delta_table=deltaTable, target_path=path)
 
 ## Append data without duplicates
 
-The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the record.
+The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the
+record.
 
 Suppose you have the following Delta table:
 
@@ -203,6 +242,7 @@ mack.append_without_duplicates(deltaTable, append_df, ["col1"])
 ```
 
 Here's the ending result:
+
 ```
 
 +----+----+----+
@@ -216,4 +256,27 @@ Here's the ending result:
 +----+----+----+
 ```
 
-Notice that the duplicate `col1` value was not appended.  If a normal append operation was run, then the Delta table would contain two rows of data with `col1` equal to 2.
+Notice that the duplicate `col1` value was not appended. If a normal append operation was run, then the Delta table would contain two rows
+of data with `col1` equal to 2.
+
+## Delta File Sizes
+
+The `delta_file_sizes` function returns a dictionary that contains the total size in bytes, the amount of files and the average file size
+for a given Delta Table.
+
+Suppose you have the following Delta Table, partitioned by `col1`:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   A|   B|
++----+----+----+
+```
+
+Running `mack.delta_file_sizes(delta_table)` on that table will return:
+
+`{"size_in_bytes": 1320,
+"number_of_files": 2,
+"average_file_size_in_bites": 660}`

@@ -336,8 +336,8 @@ def test_kills_duplicates_in_a_delta_table(tmp_path):
     chispa.assert_df_equality(res, expected, ignore_row_order=True)
 
 
-def test_drop_duplicates_in_a_delta_table(tmp_path):
-    path = f"{tmp_path}/drop_duplicates"
+def test_drop_duplicates_pkey_in_a_delta_table(tmp_path):
+    path = f"{tmp_path}/drop_duplicates_pkey"
     data = [
         (1, "A", "A", "C"),  # duplicate
         (2, "A", "B", "C"),
@@ -352,7 +352,7 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    mack.drop_duplicates(delta_table, "col1", ["col2", "col3"])
+    mack.drop_duplicates_pkey(delta_table, "col1", ["col2", "col3"])
 
     res = spark.read.format("delta").load(path)
 
@@ -361,6 +361,48 @@ def test_drop_duplicates_in_a_delta_table(tmp_path):
         (2, "A", "B", "C"),
         (5, "B", "B", "C"),
         (6, "D", "D", "C"),
+    ]
+    expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3", "col4"])
+
+    chispa.assert_df_equality(res, expected, ignore_row_order=True)
+
+
+def test_drop_duplicates_pkey_in_a_delta_table_no_duplication_cols(tmp_path):
+    path = f"{tmp_path}/drop_duplicates_pkey_no_duplication_cols"
+    data = [
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3", "col4"])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    with pytest.raises(mack.MackValidationError):
+        mack.drop_duplicates_pkey(delta_table, "col1", [])
+
+
+def test_drop_duplicates_in_a_delta_table(tmp_path):
+    path = f"{tmp_path}/drop_duplicates"
+    data = [
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+        (1, "A", "A", "C"),  # duplicate
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3", "col4"])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    mack.drop_duplicates(delta_table, ["col1"]),
+
+    res = spark.read.format("delta").load(path)
+
+    expected_data = [
+        (1, "A", "A", "C"),
     ]
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3", "col4"])
 
@@ -469,3 +511,38 @@ def test_append_without_duplicates_multi_column(tmp_path):
     ]
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
+
+
+def test_describe_table(tmp_path):
+    path = f"{tmp_path}/copy_test_1"
+    data = [
+        (1, "A", "A"),
+        (2, "A", "B"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    (
+        df.write.format("delta")
+        .partitionBy(["col1"])
+        .option("delta.logRetentionDuration", "interval 30 days")
+        .save(path)
+    )
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    result = mack.delta_file_sizes(delta_table)
+
+    expected_result = {
+        "size_in_bytes": 1320,
+        "number_of_files": 2,
+        "average_file_size_in_bites": 660,
+    }
+
+    assert result == expected_result
+
+
+def test_humanize_bytes_formats_nicely():
+    assert(mack.humanize_bytes(12345678) == "12.35 MB")
+    assert(mack.humanize_bytes(1234567890) == "1.23 GB")
+    assert(mack.humanize_bytes(1234567890000) == "1.23 TB")
+    assert(mack.humanize_bytes(1234567890000000) == "1.23 PB")
