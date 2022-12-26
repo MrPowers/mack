@@ -7,10 +7,6 @@ from pyspark.sql.window import Window
 from pyspark.sql.dataframe import DataFrame
 
 
-class MackValidationError(ValueError):
-    """raise this when there's a Mack validation error"""
-
-
 def type_2_scd_upsert(path, updates_df, primary_key, attr_col_names):
     return type_2_scd_generic_upsert(
         path,
@@ -41,7 +37,7 @@ def type_2_scd_generic_upsert(
         + [is_current_col_name, effective_time_col_name, end_time_col_name]
     )
     if sorted(base_col_names) != sorted(required_base_col_names):
-        raise MackValidationError(
+        raise TypeError(
             f"The base table has these columns '{base_col_names}', but these columns are required '{required_base_col_names}'"
         )
     # validate the updates DataFrame
@@ -50,7 +46,7 @@ def type_2_scd_generic_upsert(
         [primary_key] + attr_col_names + [effective_time_col_name]
     )
     if sorted(updates_col_names) != sorted(required_updates_col_names):
-        raise MackValidationError(
+        raise TypeError(
             f"The updates DataFrame has these columns '{updates_col_names}', but these columns are required '{required_updates_col_names}'"
         )
 
@@ -102,11 +98,11 @@ def type_2_scd_generic_upsert(
 
 
 def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = None):
-    if not delta_table:
-        raise Exception("An existing delta table must be specified.")
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
 
     if not duplication_columns or len(duplication_columns) == 0:
-        raise Exception("Duplication columns must be specified")
+        raise TypeError("Duplication columns must be specified")
 
     data_frame = delta_table.toDF()
 
@@ -114,7 +110,7 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
     data_frame_columns = data_frame.columns
     for required_column in duplication_columns:
         if required_column not in data_frame_columns:
-            raise MackValidationError(
+            raise TypeError(
                 f"The base table has these columns '{data_frame_columns}', but these columns are required '{duplication_columns}'"
             )
 
@@ -144,19 +140,17 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
 def drop_duplicates_pkey(
     delta_table: DeltaTable, primary_key: str, duplication_columns: List[str]
 ):
-    if not delta_table:
-        raise MackValidationError("An existing delta table must be specified.")
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
 
     if not primary_key:
-        raise MackValidationError("A unique primary key must be specified.")
+        raise TypeError("A unique primary key must be specified.")
 
     if not duplication_columns or len(duplication_columns) == 0:
-        raise MackValidationError("A duplication column must be specified.")
+        raise TypeError("A duplication column must be specified.")
 
     if primary_key in duplication_columns:
-        raise MackValidationError(
-            "Primary key must not be part of the duplication columns."
-        )
+        raise TypeError("Primary key must not be part of the duplication columns.")
 
     data_frame = delta_table.toDF()
 
@@ -165,7 +159,7 @@ def drop_duplicates_pkey(
     required_columns = [primary_key] + duplication_columns
     for required_column in required_columns:
         if required_column not in data_frame_columns:
-            raise MackValidationError(
+            raise TypeError(
                 f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_columns}'"
             )
 
@@ -212,11 +206,11 @@ def drop_duplicates_pkey(
 
 
 def drop_duplicates(delta_table: DeltaTable, duplication_columns: List[str]):
-    if not delta_table:
-        raise MackValidationError("An existing delta table must be specified.")
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
 
     if not duplication_columns or len(duplication_columns) == 0:
-        raise MackValidationError("A duplication column must be specified.")
+        raise TypeError("A duplication column must be specified.")
 
     data_frame = delta_table.toDF()
 
@@ -233,11 +227,11 @@ def drop_duplicates(delta_table: DeltaTable, duplication_columns: List[str]):
 def copy_table(
     delta_table: DeltaTable, target_path: str = None, target_table: str = None
 ):
-    if not delta_table:
-        raise Exception("An existing delta table must be specified.")
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
 
     if not target_path and not target_table:
-        raise Exception("Either target_path or target_table must be specified.")
+        raise TypeError("Either target_path or target_table must be specified.")
 
     origin_table = delta_table.toDF()
 
@@ -262,8 +256,8 @@ def copy_table(
 def append_without_duplicates(
     delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None
 ):
-    if not delta_table:
-        raise Exception("An existing delta table must be specified.")
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
 
     condition_columns = []
     for column in p_keys:
@@ -275,6 +269,48 @@ def append_without_duplicates(
     delta_table.alias("old").merge(
         append_data.alias("new"), condition_columns
     ).whenNotMatchedInsertAll().execute()
+
+
+def is_composite_key_candidate(delta_table: DeltaTable, cols: List[str]) -> bool:
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
+
+    if not cols or len(cols) == 0:
+        raise TypeError("At least one column must be specified.")
+
+    data_frame = delta_table.toDF()
+
+    for required_column in cols:
+        if required_column not in data_frame.columns:
+            raise TypeError(
+                f"The base table has these columns '{data_frame.columns}', but these columns are required '{cols}'"
+            )
+
+    duplicate_records = (
+        data_frame.withColumn(
+            "amount_of_records",
+            count("*").over(Window.partitionBy(cols)),
+        )
+        .filter(col("amount_of_records") > 1)
+        .drop("amount_of_records")
+    )
+
+    if len(duplicate_records.take(1)) == 0:
+        return True
+
+    return False
+
+
+def delta_file_sizes(delta_table: DeltaTable):
+    details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
+    size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
+    average_file_size_in_bites = round(size_in_bytes / number_of_files, 0)
+
+    return {
+        "size_in_bytes": size_in_bytes,
+        "number_of_files": number_of_files,
+        "average_file_size_in_bites": average_file_size_in_bites,
+    }
 
 
 def humanize_bytes(n: int) -> str:

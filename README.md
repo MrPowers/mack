@@ -21,9 +21,23 @@ import mack
 mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
 ```
 
+## Dictionary
+
+**Natural key:** an attribute that can uniquely identify a row, and exists in the real world.<br>
+**Surrogate key:** an attribute that can uniquely identify a row, and does not exist in the real world.<br>
+**Composite key:** more than one attribute that when combined can uniquely identify a row.<br>
+**Primary key:** the single unique identifier for the row.<br>
+**Candidate key:** an attribute that could be the primary key.<br>
+**Alternate key:** a candidate key that is not the primary key.<br>
+**Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.<br>
+**Foreign key:** an attribute that is used to refer to another record in another table.<br>
+
+[Source](https://www.databasestar.com/database-keys/#:~:text=Natural%20key%3A%20an%20attribute%20that,can%20uniquely%20identify%20a%20row).
+
 ## Type 2 SCD Upserts
 
-This library provides an opinionated, conventions over configuration, approach to Type 2 SCD management.  Let's look at an example before covering the conventions required to take advantage of the functionality.
+This library provides an opinionated, conventions over configuration, approach to Type 2 SCD management. Let's look at an example before
+covering the conventions required to take advantage of the functionality.
 
 Suppose you have the following SCD table with the `pkey` primary key:
 
@@ -196,7 +210,8 @@ Copying includes:
 * Partitioning
 * Table properties
 
-Copying **does not** include the delta log, which means that you will not be able to restore the new table to an old version of the original table.
+Copying **does not** include the delta log, which means that you will not be able to restore the new table to an old version of the original
+table.
 
 Here's how to perform the copy:
 
@@ -206,7 +221,8 @@ mack.copy_table(delta_table=deltaTable, target_path=path)
 
 ## Append data without duplicates
 
-The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the record.
+The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the
+record.
 
 Suppose you have the following Delta table:
 
@@ -239,6 +255,7 @@ mack.append_without_duplicates(deltaTable, append_df, ["col1"])
 ```
 
 Here's the ending result:
+
 ```
 
 +----+----+----+
@@ -295,3 +312,48 @@ Here are some of the code design principles used in Mack:
 * We avoid classes whenever possible.  Classes make it harder to copy / paste little chunks of code into notebooks.  It's good to [Stop Writing Classes](https://www.youtube.com/watch?v=o9pEzgHorH0).
 * We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate. 
 * Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
+
+Notice that the duplicate `col1` value was not appended. If a normal append operation was run, then the Delta table would contain two rows
+of data with `col1` equal to 2.
+
+## Delta File Sizes
+
+The `delta_file_sizes` function returns a dictionary that contains the total size in bytes, the amount of files and the average file size
+for a given Delta Table.
+
+Suppose you have the following Delta Table, partitioned by `col1`:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   A|   B|
++----+----+----+
+```
+
+Running `mack.delta_file_sizes(delta_table)` on that table will return:
+
+`{"size_in_bytes": 1320,
+"number_of_files": 2,
+"average_file_size_in_bites": 660}`
+
+
+## Is Composite Key Candidate
+
+The `is_composite_key_candidate` function returns a boolean that indicates whether a set of columns are unique and could form a composite key or not.
+
+Suppose you have the following Delta Table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   B|   B|
+|   2|   C|   B|
++----+----+----+
+```
+
+Running `mack.is_composite_key_candidate(delta_table, ["col1"])` on that table will return `False`.
+Running `mack.is_composite_key_candidate(delta_table, ["col1", "col2"])` on that table will return `True`.
