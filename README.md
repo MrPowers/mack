@@ -295,9 +295,9 @@ Running `mack.delta_file_sizes(delta_table)` on that table will return:
 "average_file_size_in_bites": 660}`
 
 
-## Is Composite Key
+## Is Composite Key Candidate
 
-The `is_composite_key` function returns a boolean that indicates whether a set of columns are unique or not.
+The `is_composite_key_candidate` function returns a boolean that indicates whether a set of columns are unique and could form a composite key or not.
 
 Suppose you have the following Delta Table:
 
@@ -311,5 +311,5 @@ Suppose you have the following Delta Table:
 +----+----+----+
 ```
 
-Running `mack.is_composite_key(delta_table, ["col1"])` on that table will return `False`.
-Running `mack.is_composite_key(delta_table, ["col1", "col2"])` on that table will return `True`.
+Running `mack.is_composite_key_candidate(delta_table, ["col1"])` on that table will return `False`.
+Running `mack.is_composite_key_candidate(delta_table, ["col1", "col2"])` on that table will return `True`.
