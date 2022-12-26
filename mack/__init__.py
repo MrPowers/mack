@@ -271,7 +271,7 @@ def append_without_duplicates(
     ).whenNotMatchedInsertAll().execute()
 
 
-def is_composite_key(delta_table: DeltaTable, cols: List[str]) -> bool:
+def is_composite_key_candidate(delta_table: DeltaTable, cols: List[str]) -> bool:
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
