@@ -277,12 +277,12 @@ def append_without_duplicates(
     ).whenNotMatchedInsertAll().execute()
 
 
-def is_col_unique(delta_table: DeltaTable, cols: List[str]) -> bool:
-    if not delta_table:
-        raise Exception("An existing delta table must be specified.")
+def is_composite_key(delta_table: DeltaTable, cols: List[str]) -> bool:
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
 
     if not cols or len(cols) == 0:
-        raise MackValidationError("At least one column must be specified.")
+        raise TypeError("At least one column must be specified.")
 
     data_frame = delta_table.toDF()
 

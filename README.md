@@ -21,6 +21,19 @@ import mack
 mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
 ```
 
+## Dictionary
+
+**Natural key:** an attribute that can uniquely identify a row, and exists in the real world.<br>
+**Surrogate key:** an attribute that can uniquely identify a row, and does not exist in the real world.<br>
+**Composite key:** more than one attribute that when combined can uniquely identify a row.<br>
+**Primary key:** the single unique identifier for the row.<br>
+**Candidate key:** an attribute that could be the primary key.<br>
+**Alternate key:** a candidate key that is not the primary key.<br>
+**Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.<br>
+**Foreign key:** an attribute that is used to refer to another record in another table.<br>
+
+[Source](https://www.databasestar.com/database-keys/#:~:text=Natural%20key%3A%20an%20attribute%20that,can%20uniquely%20identify%20a%20row).
+
 ## Type 2 SCD Upserts
 
 This library provides an opinionated, conventions over configuration, approach to Type 2 SCD management. Let's look at an example before
@@ -282,9 +295,9 @@ Running `mack.delta_file_sizes(delta_table)` on that table will return:
 "average_file_size_in_bites": 660}`
 
 
-## Is Col Unique
+## Is Composite Key
 
-The `is_col_unique` function returns a boolean that indicates whether a set of columns are unique or not.
+The `is_composite_key` function returns a boolean that indicates whether a set of columns are unique or not.
 
 Suppose you have the following Delta Table:
 
@@ -298,5 +311,5 @@ Suppose you have the following Delta Table:
 +----+----+----+
 ```
 
-Running `mack.is_col_unique(delta_table, ["col1"])` on that table will return `False`.
-Running `mack.is_col_unique(delta_table, ["col1", "col2"])` on that table will return `True`.
+Running `mack.is_composite_key(delta_table, ["col1"])` on that table will return `False`.
+Running `mack.is_composite_key(delta_table, ["col1", "col2"])` on that table will return `True`.

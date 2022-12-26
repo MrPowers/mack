@@ -513,8 +513,8 @@ def test_append_without_duplicates_multi_column(tmp_path):
     chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
 
 
-def test_is_col_unique(tmp_path):
-    path = f"{tmp_path}/is_col_unique"
+def test_is_composite_key(tmp_path):
+    path = f"{tmp_path}/is_composite_key"
     data = [
         (1, "a", "A"),
         (2, "b", "R"),
@@ -527,8 +527,8 @@ def test_is_col_unique(tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    assert not mack.is_col_unique(delta_table, ["col1"])
-    assert mack.is_col_unique(delta_table, ["col1", "col2"])
+    assert not mack.is_composite_key(delta_table, ["col1"])
+    assert mack.is_composite_key(delta_table, ["col1", "col2"])
 
 
 def test_describe_table(tmp_path):
