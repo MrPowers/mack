@@ -271,6 +271,36 @@ def append_without_duplicates(
     ).whenNotMatchedInsertAll().execute()
 
 
+def is_composite_key(delta_table: DeltaTable, cols: List[str]) -> bool:
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
+
+    if not cols or len(cols) == 0:
+        raise TypeError("At least one column must be specified.")
+
+    data_frame = delta_table.toDF()
+
+    for required_column in cols:
+        if required_column not in data_frame.columns:
+            raise TypeError(
+                f"The base table has these columns '{data_frame.columns}', but these columns are required '{cols}'"
+            )
+
+    duplicate_records = (
+        data_frame.withColumn(
+            "amount_of_records",
+            count("*").over(Window.partitionBy(cols)),
+        )
+        .filter(col("amount_of_records") > 1)
+        .drop("amount_of_records")
+    )
+
+    if len(duplicate_records.take(1)) == 0:
+        return True
+
+    return False
+
+
 def delta_file_sizes(delta_table: DeltaTable):
     details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
     size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
