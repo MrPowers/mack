@@ -18,8 +18,7 @@ jobs:
       with:
         python-version: 3.9
     - name: Install Dependencies
-        run: poetry install
-        
+      run: poetry install
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
