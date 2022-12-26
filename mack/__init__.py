@@ -288,7 +288,7 @@ def is_composite_key(delta_table: DeltaTable, cols: List[str]) -> bool:
 
     for required_column in cols:
         if required_column not in data_frame.columns:
-            raise MackValidationError(
+            raise TypeError(
                 f"The base table has these columns '{data_frame.columns}', but these columns are required '{cols}'"
             )
 
