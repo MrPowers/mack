@@ -35,5 +35,5 @@ jobs:
       uses: py-actions/flake8@v2
       with:
         max-line-length: "88"
-        ignore: "E501,E275"
+        ignore: "E501,E275,W503"
         plugins: "flake8-bugbear==22.12.6 pep8-naming flake8-pyproject"
