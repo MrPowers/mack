@@ -109,7 +109,7 @@ def test_errors_out_if_base_df_does_not_have_all_required_columns(tmp_path):
     )
     updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    with pytest.raises(mack.MackValidationError):
+    with pytest.raises(TypeError):
         mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
 
 
@@ -145,7 +145,7 @@ def test_errors_out_if_updates_table_does_not_contain_all_required_columns(tmp_p
     )
     updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    with pytest.raises(mack.MackValidationError):
+    with pytest.raises(TypeError):
         mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
 
 
@@ -380,7 +380,7 @@ def test_drop_duplicates_pkey_in_a_delta_table_no_duplication_cols(tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    with pytest.raises(mack.MackValidationError):
+    with pytest.raises(TypeError):
         mack.drop_duplicates_pkey(delta_table, "col1", [])
 
 
@@ -542,7 +542,7 @@ def test_describe_table(tmp_path):
 
 
 def test_humanize_bytes_formats_nicely():
-    assert(mack.humanize_bytes(12345678) == "12.35 MB")
-    assert(mack.humanize_bytes(1234567890) == "1.23 GB")
-    assert(mack.humanize_bytes(1234567890000) == "1.23 TB")
-    assert(mack.humanize_bytes(1234567890000000) == "1.23 PB")
+    assert mack.humanize_bytes(12345678) == "12.35 MB"
+    assert mack.humanize_bytes(1234567890) == "1.23 GB"
+    assert mack.humanize_bytes(1234567890000) == "1.23 TB"
+    assert mack.humanize_bytes(1234567890000000) == "1.23 PB"
