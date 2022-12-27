@@ -313,9 +313,6 @@ Here are some of the code design principles used in Mack:
 * We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate. 
 * Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
 
-Notice that the duplicate `col1` value was not appended. If a normal append operation was run, then the Delta table would contain two rows
-of data with `col1` equal to 2.
-
 ## Delta File Sizes
 
 The `delta_file_sizes` function returns a dictionary that contains the total size in bytes, the amount of files and the average file size
