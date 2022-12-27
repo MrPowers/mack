@@ -269,8 +269,49 @@ Here's the ending result:
 +----+----+----+
 ```
 
-Notice that the duplicate `col1` value was not appended. If a normal append operation was run, then the Delta table would contain two rows
-of data with `col1` equal to 2.
+Notice that the duplicate `col1` value was not appended.  If a normal append operation was run, then the Delta table would contain two rows of data with `col1` equal to 2.
+
+## Project philosophy 
+
+The mack library is designed to make common Delta Lake data tasks easier.
+
+You don't need to use mack of course.  You can write the logic yourself.
+
+If you don't want to add a dependency to your project, you can also easily copy / paste the functions from mack.  The functions in this library are intentionally designed to be easy to copy and paste.
+
+Let's look at some of the reasons you may want to add mack as a dependency.
+
+### Exposing nice public interfaces
+
+The public interface (and only the public interface) is available via the `mack` namespace.
+
+When you run `import mack`, you can access the entirety of the public interface.  No private implementation details are exposed in the `mack` namespace.
+
+### Minimal dependencies
+
+Mack only depends on Spark & Delta Lake.  No other dependencies will be added to Mack.
+
+Spark users leverage a variety of runtimes and it's not always easy to add a dependency.  You can run `pip install mack` and won't have to worry about resolving a lot of dependency conflicts.  You can also Just attach a mack wheel file to a cluster to leverage the project.
+
+### Provide best practices examples for the community
+
+Mack strives to be a good example codebase for the PySpark / Delta Lake community.
+
+There aren't a lot of open source Delta Lake projects.  There are even fewer that use good software engineering practices like CI and unit testing.  You can use mack to help guide your design decisions in proprietary code repos.
+
+### Stable public interfaces and long term support after 1.0 release
+
+Mack reserves the right to make breaking public interface changes before the 1.0 release.  We'll always minimize breaking changes whenever possible.
+ 
+After the 1.0 release, Mack will stricly follow Semantic Versioning 2.0 and will only make breaking public interface changes in major releases.  Hopefully 1.0 will be the only major release and there won't have to be any breaking changes.
+
+### Code design
+
+Here are some of the code design principles used in Mack:
+
+* We avoid classes whenever possible.  Classes make it harder to copy / paste little chunks of code into notebooks.  It's good to [Stop Writing Classes](https://www.youtube.com/watch?v=o9pEzgHorH0).
+* We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate. 
+* Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
 
 ## Delta File Sizes
 
