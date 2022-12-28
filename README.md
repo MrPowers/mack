@@ -2,6 +2,7 @@
 
 ![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/ci.yml/badge.svg)
 ![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/black.yml/badge.svg)
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/flake8.yml/badge.svg)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/mack)
 [![PyPI version](https://badge.fury.io/py/mack.svg)](https://badge.fury.io/py/mack)
 
