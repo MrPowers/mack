@@ -304,12 +304,12 @@ def is_composite_key_candidate(delta_table: DeltaTable, cols: List[str]) -> bool
 def delta_file_sizes(delta_table: DeltaTable):
     details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
     size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
-    average_file_size_in_bites = round(size_in_bytes / number_of_files, 0)
+    average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
 
     return {
         "size_in_bytes": size_in_bytes,
         "number_of_files": number_of_files,
-        "average_file_size_in_bites": average_file_size_in_bites,
+        "average_file_size_in_bytes": average_file_size_in_bytes,
     }
 
 

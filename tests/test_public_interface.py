@@ -553,7 +553,7 @@ def test_describe_table(tmp_path):
     expected_result = {
         "size_in_bytes": 1320,
         "number_of_files": 2,
-        "average_file_size_in_bites": 660,
+        "average_file_size_in_bytes": 660,
     }
 
     assert result == expected_result

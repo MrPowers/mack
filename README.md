@@ -278,7 +278,7 @@ Running `mack.delta_file_sizes(delta_table)` on that table will return:
 ```
 {"size_in_bytes": 1320,
 "number_of_files": 2,
-"average_file_size_in_bites": 660}
+"average_file_size_in_bytes": 660}
 ```
 
 ## Humanize Bytes
