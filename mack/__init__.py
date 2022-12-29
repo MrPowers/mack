@@ -345,4 +345,4 @@ def with_md5_cols(df: Union[DeltaTable,DataFrame], list_of_columns: List[str], u
         uuid_col_name = "_".join(['md5']+list_of_columns)
     if type(df) == DeltaTable:
         df = df.toDF()
-    return df.withColumn("md5", md5(concat_ws("||", *list_of_columns)))
+    return df.withColumn(uuid_col_name, md5(concat_ws("||", *list_of_columns)))
