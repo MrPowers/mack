@@ -312,9 +312,9 @@ Suppose you have the following Delta Table:
 Running `mack.is_composite_key_candidate(delta_table, ["col1"])` on that table will return `False`.
 Running `mack.is_composite_key_candidate(delta_table, ["col1", "col2"])` on that table will return `True`.
 
-## Find Composite Key
+## Find Composite Key Candidates in the delta table
 
-The `find_composite_key` function returns a list of columns that can uniquely identify a row within the data.
+The `find_composite_key_candidates` function returns a list of columns that can uniquely identify a row within the data.
 
 Suppose you have the following Delta Table:
 
@@ -335,9 +335,9 @@ Suppose you have the following Delta Table:
 
 Running `mack.find_composite_key_candidates(delta_table, ['passed_records', 'failed_records', 'status_update', 'dropped_records', 'output_records'])` on that table will return `['id', 'name', 'timestamp']`.
 
-## Get md5 uuid for key columns
+## Get md5 UUID for key columns
 
-The `get_md5` function can be used after using the above-mentioned `find_composite_key` function to generate a `md5 uuid` column based on the identified key columns.
+The `with_md5_cols` function can be used after using the above-mentioned `find_composite_key_candidates` function to generate a `md5 uuid` column based on the identified key columns.
 
 Suppose you have the following Delta Table:
 
