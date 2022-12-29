@@ -2,6 +2,7 @@
 
 ![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/ci.yml/badge.svg)
 ![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/black.yml/badge.svg)
+![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/flake8.yml/badge.svg)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/mack)
 [![PyPI version](https://badge.fury.io/py/mack.svg)](https://badge.fury.io/py/mack)
 
@@ -310,6 +311,67 @@ Suppose you have the following Delta Table:
 
 Running `mack.is_composite_key_candidate(delta_table, ["col1"])` on that table will return `False`.
 Running `mack.is_composite_key_candidate(delta_table, ["col1", "col2"])` on that table will return `True`.
+
+## Find Composite Key Candidates in the delta table
+
+The `find_composite_key_candidates` function returns a list of columns that can uniquely identify a row within the data.
+
+Suppose you have the following Delta Table:
+
+```
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
+|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
+|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|60000         |0             |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|
+|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |50000         |400           |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_income  |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-07T14:02:00.000+0000|
+|c054f1c7-3765-49d6-aa76-debd6e76691c|spend_silver_dlt|valid_id      |70000         |500           |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
+|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|70000         |1000          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
+|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |60000         |1400          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_age     |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_score   |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
+```
+
+Running `mack.find_composite_key_candidates(delta_table, ['passed_records', 'failed_records', 'status_update', 'dropped_records', 'output_records'])` on that table will return `['id', 'name', 'timestamp']`.
+
+## Get md5 UUID for key columns
+
+The `with_md5_cols` function can be used after using the above-mentioned `find_composite_key_candidates` function to generate a `md5 uuid` column based on the identified key columns.
+
+Suppose you have the following Delta Table:
+
+```
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
+|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
+|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|60000         |0             |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|
+|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |50000         |400           |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_income  |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-07T14:02:00.000+0000|
+|c054f1c7-3765-49d6-aa76-debd6e76691c|spend_silver_dlt|valid_id      |70000         |500           |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
+|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|70000         |1000          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
+|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |60000         |1400          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_age     |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_score   |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
+```
+
+Running `mack.with_md5_cols(delta_table,['id', 'name', 'timestamp'])` on that table will return: 
+
+```
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
+|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |md5_id_name_timestamp           |
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
+|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|60000         |0             |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|e0d7b4c7c7f36e5b14a14455707868e7|
+|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |50000         |400           |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|3d3ec278e10ac253a563612f2536ebb2|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_income  |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-07T14:02:00.000+0000|b21347fb9cb04fa092f560487dffef4f|
+|c054f1c7-3765-49d6-aa76-debd6e76691c|spend_silver_dlt|valid_id      |70000         |500           |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|f1177476e14a5a4032c4870304ef7183|
+|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|70000         |1000          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|8cece0c20cfa3a596361f8331336c567|
+|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |60000         |1400          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|e465948ee1bba6e7e90b4c32eddf2867|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_age     |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|acbfca92d159c94b4cf2750c2642d591|
+|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_score   |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|79d22ad6a8e43dbc45b4681d78ef7f6b|
++------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
+```
 
 ## Dictionary
 
