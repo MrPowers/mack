@@ -327,22 +327,26 @@ def humanize_bytes(n: int) -> str:
     return f"{n} B"
 
 
-def find_composite_key_candidates(df: Union[DeltaTable,DataFrame], exclude_cols: List[str] = None):
+def find_composite_key_candidates(df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = None):
     if type(df) == DeltaTable:
         df = df.toDF()
     if exclude_cols is None:
         exclude_cols = []
     df_col_excluded = df.drop(*exclude_cols)
+    total_cols = len(df_col_excluded.columns)
     total_row_count = df_col_excluded.distinct().count()
     for n in range(1, len(df_col_excluded.columns) + 1):
         for c in combinations(df_col_excluded.columns, n):
             if df_col_excluded.select(*c).distinct().count() == total_row_count:
+                if len(df_col_excluded.select(*c).columns) == total_cols:
+                    raise ValueError(
+                        f"No composite key candidates could be identified.")
                 return list(df_col_excluded.select(*c).columns)
 
 
-def with_md5_cols(df: Union[DeltaTable,DataFrame], list_of_columns: List[str], uuid_col_name: str = None):
+def with_md5_cols(df: Union[DeltaTable, DataFrame], list_of_columns: List[str], uuid_col_name: str = None):
     if uuid_col_name is None:
-        uuid_col_name = "_".join(['md5']+list_of_columns)
+        uuid_col_name = "_".join(['md5'] + list_of_columns)
     if type(df) == DeltaTable:
         df = df.toDF()
     return df.withColumn(uuid_col_name, md5(concat_ws("||", *list_of_columns)))
