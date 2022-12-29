@@ -39,8 +39,7 @@ def type_2_scd_generic_upsert(
     )
     if sorted(base_col_names) != sorted(required_base_col_names):
         raise TypeError(
-            f"The base table has these columns '{base_col_names}', but these columns "
-            f"are required '{required_base_col_names}'"
+            f"The base table has these columns '{base_col_names}', but these columns are required '{required_base_col_names}'"
         )
     # validate the updates DataFrame
     updates_col_names = updates_df.columns
@@ -49,8 +48,7 @@ def type_2_scd_generic_upsert(
     )
     if sorted(updates_col_names) != sorted(required_updates_col_names):
         raise TypeError(
-            f"The updates DataFrame has these columns '{updates_col_names}', but these columns "
-            f"are required '{required_updates_col_names}'"
+            f"The updates DataFrame has these columns '{updates_col_names}', but these columns are required '{required_updates_col_names}'"
         )
 
     # perform the upsert
@@ -114,8 +112,7 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
     for required_column in duplication_columns:
         if required_column not in data_frame_columns:
             raise TypeError(
-                f"The base table has these columns '{data_frame_columns}', but these columns "
-                f"are required '{duplication_columns}'"
+                f"The base table has these columns '{data_frame_columns}', but these columns are required '{duplication_columns}'"
             )
 
     q = []
@@ -164,8 +161,7 @@ def drop_duplicates_pkey(
     for required_column in required_columns:
         if required_column not in data_frame_columns:
             raise TypeError(
-                f"The base table has these columns '{data_frame_columns}', but these columns "
-                f"are required '{required_columns}'"
+                f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_columns}'"
             )
 
     q = []
