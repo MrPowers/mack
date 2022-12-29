@@ -564,3 +564,100 @@ def test_humanize_bytes_formats_nicely():
     assert mack.humanize_bytes(1234567890) == "1.23 GB"
     assert mack.humanize_bytes(1234567890000) == "1.23 TB"
     assert mack.humanize_bytes(1234567890000000) == "1.23 PB"
+
+
+def test_find_composite_key(tmp_path):
+    path = f"{tmp_path}/find_composite_key"
+    data = [
+        (
+            'c054f1c7-3765-49d6-aa76-debd6e76691c', 'users_bronze_dlt', 'correct_schema', 60000, 0, 'COMPLETED', 0,
+            1000000,
+            '2021-10-06T14:07:00.000+0000'),
+        ('d5d76478-ff24-4bca-aede-c69f31b5b35e', 'user_silver_dlt', 'valid_id', 50000, 400, 'COMPLETED', 0, 1000000,
+         '2021-10-06T14:07:00.000+0000'),
+        (
+            '4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_income', 60000, 1600, 'COMPLETED', 1600,
+            100000,
+            '2021-10-07T14:02:00.000+0000'),
+        ('c054f1c7-3765-49d6-aa76-debd6e76691c', 'spend_silver_dlt', 'valid_id', 70000, 500, 'COMPLETED', 0, 1000000,
+         '2021-10-08T14:09:00.000+0000'),
+        ('c054f1c7-3765-49d6-aa76-debd6e76691c', 'users_bronze_dlt', 'correct_schema', 70000, 1000, 'COMPLETED', 0,
+         1000000, '2021-10-08T14:09:00.000+0000'),
+        ('d5d76478-ff24-4bca-aede-c69f31b5b35e', 'user_silver_dlt', 'valid_id', 60000, 1400, 'COMPLETED', 0, 1000000,
+         '2021-10-08T14:09:00.000+0000'),
+        ('4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_age', 60000, 1600, 'COMPLETED', 1600, 100000,
+         '2021-10-08T14:09:00.000+0000'),
+        ('4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_score', 60000, 1600, 'COMPLETED', 1600, 100000,
+         '2021-10-08T14:09:00.000+0000'),
+    ]
+    df = spark.createDataFrame(data, ['id', 'dataset', 'name', 'passed_records', 'failed_records', 'status_update',
+                                      'dropped_records', 'output_records', 'timestamp'
+                                      ])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    composite_keys = mack.find_composite_key(delta_table.toDF(), ['passed_records', 'failed_records', 'status_update',
+                                                                  'dropped_records', 'output_records'])
+
+    expected_keys = ['id', 'name', 'timestamp']
+
+    assert composite_keys == expected_keys
+
+
+def test_get_md5(tmp_path):
+    path = f"{tmp_path}/find_composite_key"
+    data = [
+        (
+            'c054f1c7-3765-49d6-aa76-debd6e76691c', 'users_bronze_dlt', 'correct_schema', 60000, 0, 'COMPLETED', 0,
+            1000000,
+            '2021-10-06T14:07:00.000+0000'),
+        ('d5d76478-ff24-4bca-aede-c69f31b5b35e', 'user_silver_dlt', 'valid_id', 50000, 400, 'COMPLETED', 0, 1000000,
+         '2021-10-06T14:07:00.000+0000'),
+        (
+            '4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_income', 60000, 1600, 'COMPLETED', 1600,
+            100000,
+            '2021-10-07T14:02:00.000+0000'),
+        ('c054f1c7-3765-49d6-aa76-debd6e76691c', 'spend_silver_dlt', 'valid_id', 70000, 500, 'COMPLETED', 0, 1000000,
+         '2021-10-08T14:09:00.000+0000'),
+        ('c054f1c7-3765-49d6-aa76-debd6e76691c', 'users_bronze_dlt', 'correct_schema', 70000, 1000, 'COMPLETED', 0,
+         1000000, '2021-10-08T14:09:00.000+0000'),
+        ('d5d76478-ff24-4bca-aede-c69f31b5b35e', 'user_silver_dlt', 'valid_id', 60000, 1400, 'COMPLETED', 0, 1000000,
+         '2021-10-08T14:09:00.000+0000'),
+        ('4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_age', 60000, 1600, 'COMPLETED', 1600, 100000,
+         '2021-10-08T14:09:00.000+0000'),
+        ('4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_score', 60000, 1600, 'COMPLETED', 1600, 100000,
+         '2021-10-08T14:09:00.000+0000'),
+    ]
+    df = spark.createDataFrame(data, ['id', 'dataset', 'name', 'passed_records', 'failed_records', 'status_update',
+                                      'dropped_records', 'output_records', 'timestamp'
+                                      ])
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+    with_md5 = mack.get_md5(delta_table.toDF(),['id', 'name', 'timestamp'])
+
+    expected_data = [
+        (
+        'c054f1c7-3765-49d6-aa76-debd6e76691c', 'users_bronze_dlt', 'correct_schema', 60000, 0, 'COMPLETED', 0, 1000000,
+        '2021-10-06T14:07:00.000+0000', 'e0d7b4c7c7f36e5b14a14455707868e7'),
+        ('d5d76478-ff24-4bca-aede-c69f31b5b35e', 'user_silver_dlt', 'valid_id', 50000, 400, 'COMPLETED', 0, 1000000,
+         '2021-10-06T14:07:00.000+0000', '3d3ec278e10ac253a563612f2536ebb2'),
+        (
+        '4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_income', 60000, 1600, 'COMPLETED', 1600, 100000,
+        '2021-10-07T14:02:00.000+0000', 'b21347fb9cb04fa092f560487dffef4f'),
+        ('c054f1c7-3765-49d6-aa76-debd6e76691c', 'spend_silver_dlt', 'valid_id', 70000, 500, 'COMPLETED', 0, 1000000,
+         '2021-10-08T14:09:00.000+0000', 'f1177476e14a5a4032c4870304ef7183'),
+        ('c054f1c7-3765-49d6-aa76-debd6e76691c', 'users_bronze_dlt', 'correct_schema', 70000, 1000, 'COMPLETED', 0,
+         1000000, '2021-10-08T14:09:00.000+0000', '8cece0c20cfa3a596361f8331336c567'),
+        ('d5d76478-ff24-4bca-aede-c69f31b5b35e', 'user_silver_dlt', 'valid_id', 60000, 1400, 'COMPLETED', 0, 1000000,
+         '2021-10-08T14:09:00.000+0000', 'e465948ee1bba6e7e90b4c32eddf2867'),
+        ('4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_age', 60000, 1600, 'COMPLETED', 1600, 100000,
+         '2021-10-08T14:09:00.000+0000', 'acbfca92d159c94b4cf2750c2642d591'),
+        ('4b07c459-f414-492a-9f80-640a741c12c6', 'user_gold_dlt', 'valid_score', 60000, 1600, 'COMPLETED', 1600, 100000,
+         '2021-10-08T14:09:00.000+0000', '79d22ad6a8e43dbc45b4681d78ef7f6b'),
+    ]
+    expected = spark.createDataFrame(expected_data,
+                                     ['id', 'dataset', 'name', 'passed_records', 'failed_records', 'status_update',
+                                      'dropped_records', 'output_records', 'timestamp', 'md5'])
+    chispa.assert_df_equality(with_md5, expected, ignore_row_order=True, ignore_schema=True)
