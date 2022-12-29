@@ -14,5 +14,5 @@ jobs:
       - name: Black Code Formatter Check
         uses: psf/black@stable
         with:
-          options: "--check --verbose"
+          options: "--verbose --diff"
           src: "mack"
