@@ -21,21 +21,21 @@ def type_2_scd_upsert(path, updates_df, primary_key, attr_col_names):
 
 
 def type_2_scd_generic_upsert(
-        path,
-        updates_df,
-        primary_key,
-        attr_col_names,
-        is_current_col_name,
-        effective_time_col_name,
-        end_time_col_name,
+    path,
+    updates_df,
+    primary_key,
+    attr_col_names,
+    is_current_col_name,
+    effective_time_col_name,
+    end_time_col_name,
 ):
     base_table = DeltaTable.forPath(pyspark.sql.SparkSession.getActiveSession(), path)
     # validate the existing Delta table
     base_col_names = base_table.toDF().columns
     required_base_col_names = (
-            [primary_key]
-            + attr_col_names
-            + [is_current_col_name, effective_time_col_name, end_time_col_name]
+        [primary_key]
+        + attr_col_names
+        + [is_current_col_name, effective_time_col_name, end_time_col_name]
     )
     if sorted(base_col_names) != sorted(required_base_col_names):
         raise TypeError(
@@ -44,7 +44,7 @@ def type_2_scd_generic_upsert(
     # validate the updates DataFrame
     updates_col_names = updates_df.columns
     required_updates_col_names = (
-            [primary_key] + attr_col_names + [effective_time_col_name]
+        [primary_key] + attr_col_names + [effective_time_col_name]
     )
     if sorted(updates_col_names) != sorted(required_updates_col_names):
         raise TypeError(
@@ -139,7 +139,7 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
 
 
 def drop_duplicates_pkey(
-        delta_table: DeltaTable, primary_key: str, duplication_columns: List[str]
+    delta_table: DeltaTable, primary_key: str, duplication_columns: List[str]
 ):
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
@@ -226,7 +226,7 @@ def drop_duplicates(delta_table: DeltaTable, duplication_columns: List[str]):
 
 
 def copy_table(
-        delta_table: DeltaTable, target_path: str = None, target_table: str = None
+    delta_table: DeltaTable, target_path: str = None, target_table: str = None
 ):
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
@@ -254,8 +254,47 @@ def copy_table(
         )
 
 
+def validate_append(
+    delta_table: DeltaTable,
+    append_data: DataFrame,
+    required_cols: List[str],
+    optional_additional_cols: List[str],
+):
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified.")
+
+    if not isinstance(append_data, DataFrame):
+        raise TypeError("You must provide a DataFrame that is to be appended.")
+
+    data_frame_columns = append_data.columns
+
+    for required_column in required_cols:
+        if required_column not in data_frame_columns:
+            raise TypeError(
+                f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_cols}'"
+            )
+
+    table_columns = delta_table.toDF().columns
+
+    for column in data_frame_columns:
+        if column not in table_columns and column not in optional_additional_cols:
+            raise TypeError(
+                f"The column '{column}' is not part of the current Delta Table."
+                + " If you want to add the column to the table you can use the optional_additional_cols parameter."
+            )
+
+    details = delta_table.detail().select("location").collect()[0]
+
+    (
+        append_data.write.format("delta")
+        .mode("append")
+        .option("mergeSchema", "true")
+        .save(details["location"])
+    )
+
+
 def append_without_duplicates(
-        delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None
+    delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None
 ):
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
@@ -316,18 +355,20 @@ def delta_file_sizes(delta_table: DeltaTable):
 
 def humanize_bytes(n: int) -> str:
     for prefix, k in (
-            ("PB", 1e15),
-            ("TB", 1e12),
-            ("GB", 1e9),
-            ("MB", 1e6),
-            ("kB", 1e3),
+        ("PB", 1e15),
+        ("TB", 1e12),
+        ("GB", 1e9),
+        ("MB", 1e6),
+        ("kB", 1e3),
     ):
         if n >= k * 0.9:
             return f"{n / k:.2f} {prefix}"
     return f"{n} B"
 
 
-def find_composite_key_candidates(df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = None):
+def find_composite_key_candidates(
+    df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = None
+):
     if type(df) == DeltaTable:
         df = df.toDF()
     if exclude_cols is None:
@@ -339,14 +380,17 @@ def find_composite_key_candidates(df: Union[DeltaTable, DataFrame], exclude_cols
         for c in combinations(df_col_excluded.columns, n):
             if df_col_excluded.select(*c).distinct().count() == total_row_count:
                 if len(df_col_excluded.select(*c).columns) == total_cols:
-                    raise ValueError(
-                        f"No composite key candidates could be identified.")
+                    raise ValueError("No composite key candidates could be identified.")
                 return list(df_col_excluded.select(*c).columns)
 
 
-def with_md5_cols(df: Union[DeltaTable, DataFrame], list_of_columns: List[str], uuid_col_name: str = None):
+def with_md5_cols(
+    df: Union[DeltaTable, DataFrame],
+    list_of_columns: List[str],
+    uuid_col_name: str = None,
+):
     if uuid_col_name is None:
-        uuid_col_name = "_".join(['md5'] + list_of_columns)
+        uuid_col_name = "_".join(["md5"] + list_of_columns)
     if type(df) == DeltaTable:
         df = df.toDF()
     return df.withColumn(uuid_col_name, md5(concat_ws("||", *list_of_columns)))
