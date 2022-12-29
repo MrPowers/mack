@@ -597,7 +597,7 @@ def test_find_composite_key(tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    composite_keys = mack.find_composite_key(delta_table.toDF(), ['passed_records', 'failed_records', 'status_update',
+    composite_keys = mack.find_composite_key_candidates(delta_table.toDF(), ['passed_records', 'failed_records', 'status_update',
                                                                   'dropped_records', 'output_records'])
 
     expected_keys = ['id', 'name', 'timestamp']
@@ -605,7 +605,7 @@ def test_find_composite_key(tmp_path):
     assert composite_keys == expected_keys
 
 
-def test_get_md5(tmp_path):
+def test_with_md5_cols(tmp_path):
     path = f"{tmp_path}/find_composite_key"
     data = [
         (
@@ -635,7 +635,7 @@ def test_get_md5(tmp_path):
     df.write.format("delta").save(path)
 
     delta_table = DeltaTable.forPath(spark, path)
-    with_md5 = mack.get_md5(delta_table.toDF(),['id', 'name', 'timestamp'])
+    with_md5 = mack.with_md5_cols(delta_table, ['id', 'name', 'timestamp'])
 
     expected_data = [
         (
@@ -659,5 +659,5 @@ def test_get_md5(tmp_path):
     ]
     expected = spark.createDataFrame(expected_data,
                                      ['id', 'dataset', 'name', 'passed_records', 'failed_records', 'status_update',
-                                      'dropped_records', 'output_records', 'timestamp', 'md5'])
+                                      'dropped_records', 'output_records', 'timestamp', 'md5_id_name_timestamp'])
     chispa.assert_df_equality(with_md5, expected, ignore_row_order=True, ignore_schema=True)

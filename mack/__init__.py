@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 from itertools import combinations
 
 from delta import DeltaTable
@@ -327,7 +327,9 @@ def humanize_bytes(n: int) -> str:
     return f"{n} B"
 
 
-def find_composite_key(df, exclude_cols: List[str] = None):
+def find_composite_key_candidates(df: Union[DeltaTable,DataFrame], exclude_cols: List[str] = None):
+    if type(df) == DeltaTable:
+        df = df.toDF()
     if exclude_cols is None:
         exclude_cols = []
     df_col_excluded = df.drop(*exclude_cols)
@@ -338,5 +340,9 @@ def find_composite_key(df, exclude_cols: List[str] = None):
                 return list(df_col_excluded.select(*c).columns)
 
 
-def get_md5(df, list_of_columns):
+def with_md5_cols(df: Union[DeltaTable,DataFrame], list_of_columns: List[str], uuid_col_name: str = None):
+    if uuid_col_name is None:
+        uuid_col_name = "_".join(['md5']+list_of_columns)
+    if type(df) == DeltaTable:
+        df = df.toDF()
     return df.withColumn("md5", md5(concat_ws("||", *list_of_columns)))

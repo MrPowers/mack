@@ -333,7 +333,7 @@ Suppose you have the following Delta Table:
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
 ```
 
-Running `mack.find_composite_key(delta_table.toDF(), ['passed_records', 'failed_records', 'status_update', 'dropped_records', 'output_records'])` on that table will return `['id', 'name', 'timestamp']`.
+Running `mack.find_composite_key_candidates(delta_table, ['passed_records', 'failed_records', 'status_update', 'dropped_records', 'output_records'])` on that table will return `['id', 'name', 'timestamp']`.
 
 ## Get md5 uuid for key columns
 
@@ -356,11 +356,11 @@ Suppose you have the following Delta Table:
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
 ```
 
-Running `mack.get_md5(delta_table.toDF(),['id', 'name', 'timestamp'])` on that table will return: 
+Running `mack.with_md5_cols(delta_table,['id', 'name', 'timestamp'])` on that table will return: 
 
 ```
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
-|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |md5                             |
+|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |md5_id_name_timestamp           |
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
 |c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|60000         |0             |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|e0d7b4c7c7f36e5b14a14455707868e7|
 |d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |50000         |400           |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|3d3ec278e10ac253a563612f2536ebb2|
