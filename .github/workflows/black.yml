@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Black Code Formatter Check
-        uses: RojerGS/python-black-check@master
+        uses: psf/black@stable
         with:
-          line-length: '88'
-          path: 'mack'
+          options: "--check --verbose"
+          src: "mack"
