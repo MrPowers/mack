@@ -416,54 +416,46 @@ Running `mack.find_composite_key_candidates(delta_table, ['passed_records', 'fai
 
 ## Append md5 column
 
-The `with_md5_cols` function can be used after using the above-mentioned `find_composite_key_candidates` function to generate a md5 column based on other DataFrame columns.
+The `with_md5_cols` function appends a `md5` hash of specified columns to the DataFrame.  This can be used as a unique key if the selected columns form a composite key.
+
+You can use this function with the columns identified in `find_composite_key_candidates` to append a unique key to the DataFrame.
 
 Suppose you have the following Delta table:
 
 ```
-+------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
-|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |
-+------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
-|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|60000         |0             |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|
-|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |50000         |400           |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|
-|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_income  |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-07T14:02:00.000+0000|
-|c054f1c7-3765-49d6-aa76-debd6e76691c|spend_silver_dlt|valid_id      |70000         |500           |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
-|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|70000         |1000          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
-|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |60000         |1400          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|
-|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_age     |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|
-|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_score   |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|
-+------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   a|null|
+|   2|   b|   b|
+|   3|   c|   c|
++----+----+----+
 ```
 
-Running `mack.with_md5_cols(delta_table, ['id', 'name', 'timestamp'])` on that table will append a `md5_id_name_timestamp` as follows: 
+Running `mack.with_md5_cols(delta_table, ["col2", "col3"])` on that table will append a `md5_col2_col3` as follows: 
 
 ```
-+------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
-|id                                  |dataset         |name          |passed_records|failed_records|status_update|dropped_records|output_records|timestamp                   |md5_id_name_timestamp           |
-+------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
-|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|60000         |0             |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|e0d7b4c7c7f36e5b14a14455707868e7|
-|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |50000         |400           |COMPLETED    |0              |1000000       |2021-10-06T14:07:00.000+0000|3d3ec278e10ac253a563612f2536ebb2|
-|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_income  |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-07T14:02:00.000+0000|b21347fb9cb04fa092f560487dffef4f|
-|c054f1c7-3765-49d6-aa76-debd6e76691c|spend_silver_dlt|valid_id      |70000         |500           |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|f1177476e14a5a4032c4870304ef7183|
-|c054f1c7-3765-49d6-aa76-debd6e76691c|users_bronze_dlt|correct_schema|70000         |1000          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|8cece0c20cfa3a596361f8331336c567|
-|d5d76478-ff24-4bca-aede-c69f31b5b35e|user_silver_dlt |valid_id      |60000         |1400          |COMPLETED    |0              |1000000       |2021-10-08T14:09:00.000+0000|e465948ee1bba6e7e90b4c32eddf2867|
-|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_age     |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|acbfca92d159c94b4cf2750c2642d591|
-|4b07c459-f414-492a-9f80-640a741c12c6|user_gold_dlt   |valid_score   |60000         |1600          |COMPLETED    |1600           |100000        |2021-10-08T14:09:00.000+0000|79d22ad6a8e43dbc45b4681d78ef7f6b|
-+------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
++----+----+----+--------------------------------+
+|col1|col2|col3|md5_col2_col3                   |
++----+----+----+--------------------------------+
+|1   |a   |null|0cc175b9c0f1b6a831c399e269772661|
+|2   |b   |b   |1eeaac3814eb80cc40efb005cf0b9141|
+|3   |c   |c   |4e202f8309e7b00349c70845ab02fce9|
++----+----+----+--------------------------------+
 ```
 
 ## Dictionary
 
 We're leveraging the following terminology defined [here](https://www.databasestar.com/database-keys/#:~:text=Natural%20key%3A%20an%20attribute%20that,can%20uniquely%20identify%20a%20row).
 
-**Natural key:** an attribute that can uniquely identify a row, and exists in the real world.
-**Surrogate key:** an attribute that can uniquely identify a row, and does not exist in the real world.<br>
-**Composite key:** more than one attribute that when combined can uniquely identify a row.
-**Primary key:** the single unique identifier for the row.
-**Candidate key:** an attribute that could be the primary key.
-**Alternate key:** a candidate key that is not the primary key.
-**Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.
-**Foreign key:** an attribute that is used to refer to another record in another table.
+* **Natural key:** an attribute that can uniquely identify a row, and exists in the real world.
+* **Surrogate key:** an attribute that can uniquely identify a row, and does not exist in the real world.<br>
+* **Composite key:** more than one attribute that when combined can uniquely identify a row.
+* **Primary key:** the single unique identifier for the row.
+* **Candidate key:** an attribute that could be the primary key.
+* **Alternate key:** a candidate key that is not the primary key.
+* **Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.
+* **Foreign key:** an attribute that is used to refer to another record in another table.
 
 ## Project philosophy 
 
