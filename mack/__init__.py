@@ -410,3 +410,17 @@ def check_data(
         condition = " AND ".join(check_invariants)
     print(f"For the specified check invariant(s) '{condition}' {df.filter(condition).count()} rows are being affected.")
     return df.filter(condition)
+
+
+def drop_by_invariants(
+    dt: DeltaTable,
+    delete_invariants: Union[str, List[str]]
+):
+    condition = None
+    if type(delete_invariants) == str:
+        condition = delete_invariants
+    elif type(delete_invariants) == list:
+        delete_invariants = ["(" + i + ")" for i in delete_invariants]
+        condition = " AND ".join(delete_invariants)
+    print(f"{dt.toDF().filter(condition).count()} rows are being deleted from the delta table.")
+    dt.delete(condition)
