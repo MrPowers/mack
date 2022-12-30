@@ -108,11 +108,11 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
     data_frame = delta_table.toDF()
 
     # Make sure that all the required columns are present in the provided delta table
-    data_frame_columns = data_frame.columns
+    append_data_columns = data_frame.columns
     for required_column in duplication_columns:
-        if required_column not in data_frame_columns:
+        if required_column not in append_data_columns:
             raise TypeError(
-                f"The base table has these columns '{data_frame_columns}', but these columns are required '{duplication_columns}'"
+                f"The base table has these columns '{append_data_columns}', but these columns are required '{duplication_columns}'"
             )
 
     q = []
@@ -156,12 +156,12 @@ def drop_duplicates_pkey(
     data_frame = delta_table.toDF()
 
     # Make sure that all the required columns are present in the provided delta table
-    data_frame_columns = data_frame.columns
+    append_data_columns = data_frame.columns
     required_columns = [primary_key] + duplication_columns
     for required_column in required_columns:
-        if required_column not in data_frame_columns:
+        if required_column not in append_data_columns:
             raise TypeError(
-                f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_columns}'"
+                f"The base table has these columns '{append_data_columns}', but these columns are required '{required_columns}'"
             )
 
     q = []
@@ -256,37 +256,37 @@ def copy_table(
 
 def validate_append(
     delta_table: DeltaTable,
-    append_data: DataFrame,
+    append_df: DataFrame,
     required_cols: List[str],
-    optional_additional_cols: List[str],
+    optional_cols: List[str],
 ):
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
-    if not isinstance(append_data, DataFrame):
+    if not isinstance(append_df, DataFrame):
         raise TypeError("You must provide a DataFrame that is to be appended.")
 
-    data_frame_columns = append_data.columns
+    append_data_columns = append_df.columns
 
     for required_column in required_cols:
-        if required_column not in data_frame_columns:
+        if required_column not in append_data_columns:
             raise TypeError(
-                f"The base table has these columns '{data_frame_columns}', but these columns are required '{required_cols}'"
+                f"The base Delta table has these columns '{append_data_columns}', but these columns are required '{required_cols}'"
             )
 
     table_columns = delta_table.toDF().columns
 
-    for column in data_frame_columns:
-        if column not in table_columns and column not in optional_additional_cols:
+    for column in append_data_columns:
+        if column not in table_columns and column not in optional_cols:
             raise TypeError(
-                f"The column '{column}' is not part of the current Delta Table."
-                + " If you want to add the column to the table you can use the optional_additional_cols parameter."
+                f"The column '{column}' is not part of the current Delta table."
+                + " If you want to add the column to the table you must set the optional_cols parameter."
             )
 
     details = delta_table.detail().select("location").collect()[0]
 
     (
-        append_data.write.format("delta")
+        append_df.write.format("delta")
         .mode("append")
         .option("mergeSchema", "true")
         .save(details["location"])
@@ -294,7 +294,7 @@ def validate_append(
 
 
 def append_without_duplicates(
-    delta_table: DeltaTable, append_data: DataFrame, p_keys: List[str] = None
+    delta_table: DeltaTable, append_df: DataFrame, p_keys: List[str] = None
 ):
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
@@ -307,7 +307,7 @@ def append_without_duplicates(
 
     # Insert records without duplicates
     delta_table.alias("old").merge(
-        append_data.alias("new"), condition_columns
+        append_df.alias("new"), condition_columns
     ).whenNotMatchedInsertAll().execute()
 
 
@@ -386,11 +386,11 @@ def find_composite_key_candidates(
 
 def with_md5_cols(
     df: Union[DeltaTable, DataFrame],
-    list_of_columns: List[str],
-    uuid_col_name: str = None,
+    cols: List[str],
+    output_col_name: str = None,
 ):
-    if uuid_col_name is None:
-        uuid_col_name = "_".join(["md5"] + list_of_columns)
+    if output_col_name is None:
+        output_col_name = "_".join(["md5"] + cols)
     if type(df) == DeltaTable:
         df = df.toDF()
-    return df.withColumn(uuid_col_name, md5(concat_ws("||", *list_of_columns)))
+    return df.withColumn(output_col_name, md5(concat_ws("||", *cols)))

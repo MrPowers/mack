@@ -478,41 +478,47 @@ def test_append_without_duplicates_single_column(tmp_path):
 
 def test_validate_append(tmp_path):
     path = f"{tmp_path}/validate_append"
+
+    def append_fun(delta_table, append_df):
+        mack.validate_append(
+            delta_table,
+            append_df,
+            required_cols=["col1", "col2"],
+            optional_cols=["col4"],
+        )
+
+    # Create Delta table
     data = [
         (1, "a", "A"),
-        (2, "b", "R"),
-        (3, "c", "X"),
+        (2, "b", "B"),
     ]
     df = spark.createDataFrame(data, ["col1", "col2", "col3"])
     df.write.format("delta").save(path)
 
+    # Demonstrate that certain DataFrames with optional columns can be appended
     delta_table = DeltaTable.forPath(spark, path)
-
-    append_data = spark.createDataFrame(
+    append_df = spark.createDataFrame(
         [
-            (4, "b", "A"),
-            (5, "y", "C"),
-            (6, "z", "D"),
+            (3, "c", "cat"),
+            (4, "d", "dog"),
         ],
         ["col1", "col2", "col4"],
     )
-
-    mack.validate_append(delta_table, append_data, ["col1", "col2"], ["col4"])
-
-    appended_data = spark.read.format("delta").load(path)
+    append_fun(delta_table, append_df)
 
     expected_data = [
         (1, "a", "A", None),
-        (2, "b", "R", None),
-        (3, "c", "X", None),
-        (4, "b", None, "A"),
-        (5, "y", None, "C"),
-        (6, "z", None, "D"),
+        (2, "b", "B", None),
+        (3, "c", None, "cat"),
+        (4, "d", None, "dog"),
     ]
     expected = spark.createDataFrame(expected_data, ["col1", "col2", "col3", "col4"])
-    chispa.assert_df_equality(appended_data, expected, ignore_row_order=True)
+    chispa.assert_df_equality(
+        spark.read.format("delta").load(path), expected, ignore_row_order=True
+    )
 
-    append_data_with_additional_column = spark.createDataFrame(
+    # demonstrate that DataFrames with columns that are not on the accept list cannot be appended
+    append_df = spark.createDataFrame(
         [
             (4, "b", "A"),
             (5, "y", "C"),
@@ -520,10 +526,29 @@ def test_validate_append(tmp_path):
         ],
         ["col1", "col2", "col5"],
     )
-
     with pytest.raises(TypeError):
         mack.validate_append(
-            delta_table, append_data_with_additional_column, ["col1", "col2"]
+            delta_table,
+            append_df,
+            required_cols=["col1", "col2"],
+            optional_cols=["col4"],
+        )
+
+    # demonstrate that DataFrames with missing required columns cannot be appended
+    append_df = spark.createDataFrame(
+        [
+            (4, "A"),
+            (5, "C"),
+            (6, "D"),
+        ],
+        ["col1", "col4"],
+    )
+    with pytest.raises(TypeError):
+        mack.validate_append(
+            delta_table,
+            append_df,
+            required_cols=["col1", "col2"],
+            optional_cols=["col4"],
         )
 
 

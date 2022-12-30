@@ -207,6 +207,85 @@ Here's how to perform the copy:
 mack.copy_table(delta_table=deltaTable, target_path=path)
 ```
 
+## Validate append
+
+The `validate_append` function provides a mechanism for allowing some columns for schema evolution, but rejecting appends with columns that aren't specificly allowlisted.
+
+Suppose you have the following Delta table:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   2|   b|   B|
+|   1|   a|   A|
++----+----+----+
+```
+
+Here's a appender function that wraps `validate_append`:
+
+```python
+def append_fun(delta_table, append_df):
+    mack.validate_append(
+        delta_table,
+        append_df,
+        required_cols=["col1", "col2"],
+        optional_cols=["col4"],
+    )
+```
+
+You can append the following DataFrame that contains the required columns and the optional columns:
+
+```
++----+----+----+
+|col1|col2|col4|
++----+----+----+
+|   3|   c| cat|
+|   4|   d| dog|
++----+----+----+
+```
+
+Here's what the Delta table will contain after that data is appended:
+
+```
++----+----+----+----+
+|col1|col2|col3|col4|
++----+----+----+----+
+|   3|   c|null| cat|
+|   4|   d|null| dog|
+|   2|   b|   B|null|
+|   1|   a|   A|null|
++----+----+----+----+
+```
+
+You cannot append the following DataFrame which contains the required columns, but also contains another column (`col5`) that's not specified as an optional column.
+
+```
++----+----+----+
+|col1|col2|col5|
++----+----+----+
+|   4|   b|   A|
+|   5|   y|   C|
+|   6|   z|   D|
++----+----+----+
+```
+
+Here's the error you'll get when you attempt this write: "TypeError: The column 'col5' is not part of the current Delta table. If you want to add the column to the table you must set the optional_cols parameter."
+
+You also cannot append the following DataFrame which is missing one of the required columns.
+
+```
++----+----+
+|col1|col4|
++----+----+
+|   4|   A|
+|   5|   C|
+|   6|   D|
++----+----+
+```
+
+Here's the error you'll get: "TypeError: The base Delta table has these columns '['col1', 'col4']', but these columns are required '['col1', 'col2']'."
+
 ## Append data without duplicates
 
 The `append_without_duplicates` function helps to append records to a existing Delta table without getting duplicates appended to the
@@ -312,11 +391,11 @@ Suppose you have the following Delta Table:
 Running `mack.is_composite_key_candidate(delta_table, ["col1"])` on that table will return `False`.
 Running `mack.is_composite_key_candidate(delta_table, ["col1", "col2"])` on that table will return `True`.
 
-## Find Composite Key Candidates in the delta table
+## Find Composite Key Candidates in the Delta table
 
-The `find_composite_key_candidates` function returns a list of columns that can uniquely identify a row within the data.
+The `find_composite_key_candidates` function returns columns that uniquely identify rows in a DataFrame.
 
-Suppose you have the following Delta Table:
+Suppose you have the following Delta table:
 
 ```
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
@@ -335,11 +414,11 @@ Suppose you have the following Delta Table:
 
 Running `mack.find_composite_key_candidates(delta_table, ['passed_records', 'failed_records', 'status_update', 'dropped_records', 'output_records'])` on that table will return `['id', 'name', 'timestamp']`.
 
-## Get md5 UUID for key columns
+## Append md5 column
 
-The `with_md5_cols` function can be used after using the above-mentioned `find_composite_key_candidates` function to generate a `md5 uuid` column based on the identified key columns.
+The `with_md5_cols` function can be used after using the above-mentioned `find_composite_key_candidates` function to generate a md5 column based on other DataFrame columns.
 
-Suppose you have the following Delta Table:
+Suppose you have the following Delta table:
 
 ```
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
@@ -356,7 +435,7 @@ Suppose you have the following Delta Table:
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+
 ```
 
-Running `mack.with_md5_cols(delta_table,['id', 'name', 'timestamp'])` on that table will return: 
+Running `mack.with_md5_cols(delta_table, ['id', 'name', 'timestamp'])` on that table will append a `md5_id_name_timestamp` as follows: 
 
 ```
 +------------------------------------+----------------+--------------+--------------+--------------+-------------+---------------+--------------+----------------------------+--------------------------------+
