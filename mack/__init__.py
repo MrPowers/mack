@@ -394,3 +394,19 @@ def with_md5_cols(
     if type(df) == DeltaTable:
         df = df.toDF()
     return df.withColumn(output_col_name, md5(concat_ws("||", *cols)))
+
+
+def check_data(
+    df: Union[DeltaTable, DataFrame],
+    check_invariants: Union[str, List[str]]
+):
+    condition = None
+    if type(df) == DeltaTable:
+        df = df.toDF()
+    if type(check_invariants) == str:
+        condition = check_invariants
+    elif type(check_invariants) == list:
+        check_invariants = ["(" + i + ")" for i in check_invariants]
+        condition = " AND ".join(check_invariants)
+    print(f"For the specified check invariant(s) '{condition}' {df.filter(condition).count()} rows are being affected.")
+    return df.filter(condition)
