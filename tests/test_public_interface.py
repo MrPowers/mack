@@ -662,7 +662,7 @@ def test_find_composite_key(tmp_path):
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    composite_keys = mack.find_composite_key_candidates(delta_table.toDF())
+    composite_keys = mack.find_composite_key_candidates(delta_table)
 
     expected_keys = ["col1", "col3"]
 
@@ -702,7 +702,6 @@ def test_with_md5_cols(tmp_path):
             "col3",
         ],
     )
-    df.show()
     df.write.format("delta").save(path)
 
     delta_table = DeltaTable.forPath(spark, path)
@@ -717,7 +716,6 @@ def test_with_md5_cols(tmp_path):
         expected_data,
         ["col1", "col2", "col3", "md5_col2_col3"],
     )
-    expected_df.show(truncate=False)
     chispa.assert_df_equality(
         with_md5, expected_df, ignore_row_order=True, ignore_schema=True
     )
