@@ -393,7 +393,7 @@ Running `mack.is_composite_key_candidate(delta_table, ["col1", "col2"])` on that
 
 ## Find Composite Key Candidates in the Delta table
 
-The `find_composite_key_candidates` function returns columns that uniquely identify rows in a DataFrame.
+The `find_composite_key_candidates` function helps you find a composite key that uniquely identifies the rows your Delta table.  It returns a list of columns that can be used as a composite key.
 
 Suppose you have the following Delta table:
 
