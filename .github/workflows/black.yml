@@ -10,9 +10,9 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Black Code Formatter Check
         uses: psf/black@stable
         with:
-          options: "--verbose --diff"
+          options: "--verbose --check"
           src: "mack"
