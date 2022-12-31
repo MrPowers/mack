@@ -669,6 +669,32 @@ def test_find_composite_key(tmp_path):
     assert composite_keys == expected_keys
 
 
+def test_find_all_composite_key_combos(tmp_path):
+    path = f"{tmp_path}/find_all_composite_key_combos"
+    data = [
+        (1, 1, 1),
+        (2, 1, 1),
+        (3, 2, 1),
+    ]
+    df = spark.createDataFrame(
+        data,
+        [
+            "x",
+            "y",
+            "z",
+        ],
+    )
+    df.write.format("delta").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    composite_keys = mack.find_all_composite_key_combos(delta_table)
+
+    expected_keys = ['x', 'x,y', 'x,z', 'x,y,z']
+
+    assert composite_keys == expected_keys
+
+
 def test_find_composite_key_with_value_error(tmp_path):
     path = f"{tmp_path}/find_composite_key"
     data = [
