@@ -646,125 +646,25 @@ def test_humanize_bytes_formats_nicely():
 def test_find_composite_key(tmp_path):
     path = f"{tmp_path}/find_composite_key"
     data = [
-        (
-            "c054f1c7-3765-49d6-aa76-debd6e76691c",
-            "users_bronze_dlt",
-            "correct_schema",
-            60000,
-            0,
-            "COMPLETED",
-            0,
-            1000000,
-            "2021-10-06T14:07:00.000+0000",
-        ),
-        (
-            "d5d76478-ff24-4bca-aede-c69f31b5b35e",
-            "user_silver_dlt",
-            "valid_id",
-            50000,
-            400,
-            "COMPLETED",
-            0,
-            1000000,
-            "2021-10-06T14:07:00.000+0000",
-        ),
-        (
-            "4b07c459-f414-492a-9f80-640a741c12c6",
-            "user_gold_dlt",
-            "valid_income",
-            60000,
-            1600,
-            "COMPLETED",
-            1600,
-            100000,
-            "2021-10-07T14:02:00.000+0000",
-        ),
-        (
-            "c054f1c7-3765-49d6-aa76-debd6e76691c",
-            "spend_silver_dlt",
-            "valid_id",
-            70000,
-            500,
-            "COMPLETED",
-            0,
-            1000000,
-            "2021-10-08T14:09:00.000+0000",
-        ),
-        (
-            "c054f1c7-3765-49d6-aa76-debd6e76691c",
-            "users_bronze_dlt",
-            "correct_schema",
-            70000,
-            1000,
-            "COMPLETED",
-            0,
-            1000000,
-            "2021-10-08T14:09:00.000+0000",
-        ),
-        (
-            "d5d76478-ff24-4bca-aede-c69f31b5b35e",
-            "user_silver_dlt",
-            "valid_id",
-            60000,
-            1400,
-            "COMPLETED",
-            0,
-            1000000,
-            "2021-10-08T14:09:00.000+0000",
-        ),
-        (
-            "4b07c459-f414-492a-9f80-640a741c12c6",
-            "user_gold_dlt",
-            "valid_age",
-            60000,
-            1600,
-            "COMPLETED",
-            1600,
-            100000,
-            "2021-10-08T14:09:00.000+0000",
-        ),
-        (
-            "4b07c459-f414-492a-9f80-640a741c12c6",
-            "user_gold_dlt",
-            "valid_score",
-            60000,
-            1600,
-            "COMPLETED",
-            1600,
-            100000,
-            "2021-10-08T14:09:00.000+0000",
-        ),
+        (1, "a", "z"),
+        (1, "a", "b"),
+        (3, "c", "b"),
     ]
     df = spark.createDataFrame(
         data,
         [
-            "id",
-            "dataset",
-            "name",
-            "passed_records",
-            "failed_records",
-            "status_update",
-            "dropped_records",
-            "output_records",
-            "timestamp",
+            "col1",
+            "col2",
+            "col3",
         ],
     )
     df.write.format("delta").save(path)
 
     delta_table = DeltaTable.forPath(spark, path)
 
-    composite_keys = mack.find_composite_key_candidates(
-        delta_table.toDF(),
-        [
-            "passed_records",
-            "failed_records",
-            "status_update",
-            "dropped_records",
-            "output_records",
-        ],
-    )
+    composite_keys = mack.find_composite_key_candidates(delta_table)
 
-    expected_keys = ["id", "name", "timestamp"]
+    expected_keys = ["col1", "col3"]
 
     assert composite_keys == expected_keys
 
@@ -802,7 +702,6 @@ def test_with_md5_cols(tmp_path):
             "col3",
         ],
     )
-    df.show()
     df.write.format("delta").save(path)
 
     delta_table = DeltaTable.forPath(spark, path)
@@ -817,7 +716,6 @@ def test_with_md5_cols(tmp_path):
         expected_data,
         ["col1", "col2", "col3", "md5_col2_col3"],
     )
-    expected_df.show(truncate=False)
     chispa.assert_df_equality(
         with_md5, expected_df, ignore_row_order=True, ignore_schema=True
     )
