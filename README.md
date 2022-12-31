@@ -409,6 +409,26 @@ Suppose you have the following Delta table:
 
 Running `mack.find_composite_key_candidates(delta_table)` on that table will return `["col1", "col3"]`.
 
+## Find All possible valid Composite Key Candidates in the Delta table
+
+The `find_all_composite_key_combos` function helps you find all of the possible valid  composite key candidates that 
+uniquely identifies the rows your Delta table.  It returns a list of column combinations that can be used as a 
+composite key.
+
+Suppose you have the following Delta table:
+
+```
++----+----+----+
+|x   |y   |z   |
++----+----+----+
+|   1|   1|   1|
+|   2|   1|   1|
+|   3|   2|   1|
++----+----+----+
+```
+
+Running `mack.find_all_composite_key_combos(delta_table)` on that table will return `["x", "x,y", "x,z", "x,y,z"]`.
+
 ## Append md5 column
 
 The `with_md5_cols` function appends a `md5` hash of specified columns to the DataFrame.  This can be used as a unique key if the selected columns form a composite key.

@@ -3,7 +3,7 @@ from itertools import combinations
 
 from delta import DeltaTable
 import pyspark
-from pyspark.sql.functions import count, col, row_number, md5, concat_ws
+from pyspark.sql.functions import count, col, row_number, md5, concat_ws, collect_set, size, lit
 from pyspark.sql.window import Window
 from pyspark.sql.dataframe import DataFrame
 
@@ -382,6 +382,33 @@ def find_composite_key_candidates(
                 if len(df_col_excluded.select(*c).columns) == total_cols:
                     raise ValueError("No composite key candidates could be identified.")
                 return list(df_col_excluded.select(*c).columns)
+
+
+def find_all_composite_key_combos(
+    df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = None
+):
+    if type(df) == DeltaTable:
+        df = df.toDF()
+    if exclude_cols is None:
+        exclude_cols = []
+    df_col_excluded = df.drop(*exclude_cols)
+    col_select_condition = df_col_excluded.distinct().count()
+    initcols = df_col_excluded.columns
+    for i in range(len(initcols)+1):
+        for c in list(combinations(initcols, i+2)):
+            df_col_excluded = df_col_excluded.withColumn(','.join(c), concat_ws(',', *c))
+    finalcols = df_col_excluded.columns
+    exprs = [size(collect_set(x)).alias(x) for x in finalcols]
+    df_col_excluded = df_col_excluded \
+        .withColumn("column_combos ->", lit("distinct_row_counts ->")) \
+        .groupBy("column_combos ->") \
+        .agg(*exprs)
+    columns = [
+        column for column in df_col_excluded.columns if
+        df_col_excluded.select(column).collect()[0][0] == col_select_condition
+    ]
+    df_col_excluded.select("column_combos ->", *columns).show(truncate=False)
+    return columns
 
 
 def with_md5_cols(
