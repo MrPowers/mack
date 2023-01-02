@@ -628,9 +628,9 @@ def test_describe_table(tmp_path):
     result = mack.delta_file_sizes(delta_table)
 
     expected_result = {
-        "size_in_bytes": 1320,
-        "number_of_files": 2,
-        "average_file_size_in_bytes": 660,
+        "size": "1.32 kB",
+        "number_of_files": "2",
+        "average_file_size": "660.0 B",
     }
 
     assert result == expected_result

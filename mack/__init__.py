@@ -346,10 +346,14 @@ def delta_file_sizes(delta_table: DeltaTable):
     size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
     average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
 
+    humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+    humanized_number_of_files = f"{number_of_files:,}"
+    humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
+
     return {
-        "size_in_bytes": size_in_bytes,
-        "number_of_files": number_of_files,
-        "average_file_size_in_bytes": average_file_size_in_bytes,
+        "size": humanized_size_in_bytes,
+        "number_of_files": humanized_number_of_files,
+        "average_file_size": humanized_average_file_size,
     }
 
 
