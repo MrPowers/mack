@@ -1,14 +1,29 @@
-from typing import List, Union
 from itertools import combinations
+from typing import List, Union, Dict, Any
 
 from delta import DeltaTable
 import pyspark
-from pyspark.sql.functions import count, col, row_number, md5, concat_ws
-from pyspark.sql.window import Window
 from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.functions import col, concat_ws, count, md5, row_number
+from pyspark.sql.window import Window
 
 
-def type_2_scd_upsert(path, updates_df, primary_key, attr_col_names):
+def type_2_scd_upsert(path: str, updates_df: DataFrame, primary_key: str, attr_col_names: List[str]) -> None:
+    """
+    <description>
+    
+    :param path: <description>
+    :type path: str
+    :param updates_df: <description>
+    :type updates_df: DataFrame 
+    :param primary_key: <description>
+    :type primary_key: str
+    :param attr_col_names: <description>
+    :type attr_col_names: List[str]
+
+    :returns: <description>
+    :rtype: None 
+    """
     return type_2_scd_generic_upsert(
         path,
         updates_df,
@@ -21,15 +36,40 @@ def type_2_scd_upsert(path, updates_df, primary_key, attr_col_names):
 
 
 def type_2_scd_generic_upsert(
-    path,
-    updates_df,
-    primary_key,
-    attr_col_names,
-    is_current_col_name,
-    effective_time_col_name,
-    end_time_col_name,
-):
+    path: str,
+    updates_df: DataFrame,
+    primary_key: str,
+    attr_col_names: List[str],
+    is_current_col_name: str,
+    effective_time_col_name: str,
+    end_time_col_name: str,
+) -> None:
+    """
+    <description>
+    
+    :param path: <description>
+    :type path: str
+    :param updates_df: <description>
+    :type updates_df: DataFrame 
+    :param primary_key: <description>
+    :type primary_key: str
+    :param attr_col_names: <description>
+    :type attr_col_names: List[str]
+    :param is_current_col_name: <description>
+    :type is_current_col_name: str
+    :param effective_time_col_name: <description>
+    :type effective_time_col_name: str
+    :param end_time_col_name: <description>
+    :type effective_time_col_name: str
+
+    :raises TypeError: Raises type error when required column names are not in the base table.
+    :raises TypeError: Raises type error when required column names for updates are not in the attributes columns list. 
+
+    :returns: <description>
+    :rtype: None 
+    """
     base_table = DeltaTable.forPath(pyspark.sql.SparkSession.getActiveSession(), path)
+
     # validate the existing Delta table
     base_col_names = base_table.toDF().columns
     required_base_col_names = (
@@ -98,7 +138,18 @@ def type_2_scd_generic_upsert(
     return res
 
 
-def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = None):
+def kill_duplicates(delta_table: DeltaTable, duplication_columns: List = []) -> None:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param duplication_columns: <description>, defaults to empty list.
+    :type duplication_columns: List
+
+    :raises TypeError: Raises type error when input arguments have a invalid type or are empty.
+    :raises TypeError: Raises type error when required columns are missing in the provided delta table.
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -139,8 +190,21 @@ def kill_duplicates(delta_table: DeltaTable, duplication_columns: List[str] = No
 
 
 def drop_duplicates_pkey(
-    delta_table: DeltaTable, primary_key: str, duplication_columns: List[str]
-):
+    delta_table: DeltaTable, primary_key: str, duplication_columns: List
+) -> None:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param primary_key: <description>
+    :type primary_key: str 
+    :param duplication_columns: <description>
+    :type duplication_columns: List
+
+    :raises TypeError: Raises type error when input arguments have a invalid type, are missing or are empty.
+    :raises TypeError: Raises type error when required columns are missing in the provided delta table.
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -206,7 +270,17 @@ def drop_duplicates_pkey(
     ).whenMatchedDelete().execute()
 
 
-def drop_duplicates(delta_table: DeltaTable, duplication_columns: List[str]):
+def drop_duplicates(delta_table: DeltaTable, duplication_columns: List) -> None:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param duplication_columns: <description>
+    :type duplication_columns: List
+
+    :raises TypeError: Raises type error when input arguments have a invalid type, are missing or are empty.
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -226,8 +300,20 @@ def drop_duplicates(delta_table: DeltaTable, duplication_columns: List[str]):
 
 
 def copy_table(
-    delta_table: DeltaTable, target_path: str = None, target_table: str = None
-):
+    delta_table: DeltaTable, target_path: str = "", target_table: str = "" 
+) -> None:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param target_path: <description>, defaults to empty string.
+    :type target_path: str
+    :param target_table: <description>, defaults to empty string.
+    :type target_table: str
+
+    :raises TypeError: Raises type error when input arguments have a invalid type, are missing or are empty.
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -259,7 +345,23 @@ def validate_append(
     append_df: DataFrame,
     required_cols: List[str],
     optional_cols: List[str],
-):
+) -> None:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param append_df: <description>
+    :type append_df: DataFrame 
+    :param required_cols: <description>
+    :type required_cols: List[str]
+    :param optional_cols: <description>
+    :type optional_cols: List[str]
+
+    :raises TypeError: Raises type error when input arguments have a invalid type, are missing or are empty.
+    :raises TypeError: Raises type error when required columns are missing in the provided delta table.
+    :raises TypeError: Raises type error when column in append dataframe is not part of the original delta table..
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -294,8 +396,20 @@ def validate_append(
 
 
 def append_without_duplicates(
-    delta_table: DeltaTable, append_df: DataFrame, p_keys: List[str] = None
-):
+    delta_table: DeltaTable, append_df: DataFrame, p_keys: List[str] = [] 
+) -> None:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param append_df: <description>
+    :type append_df: DataFrame 
+    :param p_keys: <description>
+    :type p_keys: List[str]
+
+    :raises TypeError: Raises type error when input arguments have a invalid type.
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -311,7 +425,23 @@ def append_without_duplicates(
     ).whenNotMatchedInsertAll().execute()
 
 
-def is_composite_key_candidate(delta_table: DeltaTable, cols: List[str]) -> bool:
+def is_composite_key_candidate(delta_table: DeltaTable, cols: List) -> bool:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+    :param append_df: <description>
+    :type append_df: DataFrame 
+    :param p_keys: <description>
+    :type p_keys: List
+
+    :raises TypeError: Raises type error when input arguments have a invalid type or are missing.
+    :raises TypeError: Raises type error when required columns are not in dataframe columns.
+
+    :returns: <description>
+    :rtype: bool 
+    """
     if not isinstance(delta_table, DeltaTable):
         raise TypeError("An existing delta table must be specified.")
 
@@ -341,7 +471,16 @@ def is_composite_key_candidate(delta_table: DeltaTable, cols: List[str]) -> bool
     return False
 
 
-def delta_file_sizes(delta_table: DeltaTable):
+def delta_file_sizes(delta_table: DeltaTable) -> Dict[str, int]:
+    """
+    <description>
+    
+    :param delta_table: <description>
+    :type delta_table: DeltaTable 
+
+    :returns: <description>
+    :rtype: Dict[str, int] 
+    """
     details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
     size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
     average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
@@ -354,6 +493,15 @@ def delta_file_sizes(delta_table: DeltaTable):
 
 
 def humanize_bytes(n: int) -> str:
+    """
+    <description>
+    
+    :param n: <description>
+    :type n: int 
+
+    :returns: <description>
+    :rtype: str 
+    """
     for prefix, k in (
         ("PB", 1e15),
         ("TB", 1e12),
@@ -366,9 +514,20 @@ def humanize_bytes(n: int) -> str:
     return f"{n} B"
 
 
-def find_composite_key_candidates(
-    df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = None
-):
+def find_composite_key_candidates(df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = []) -> List:
+    """
+    <description>
+    
+    :param df: <description>
+    :type df: DeltaTable or DataFrame 
+    :param exclude_cols: <description>
+    :type exclude_cols: List[str], defaults to empty list.
+
+    :raises TypeError: Raises type error when no composite key can be found.
+
+    :returns: <description>
+    :rtype: List 
+    """
     if type(df) == DeltaTable:
         df = df.toDF()
     if exclude_cols is None:
@@ -387,8 +546,23 @@ def find_composite_key_candidates(
 def with_md5_cols(
     df: Union[DeltaTable, DataFrame],
     cols: List[str],
-    output_col_name: str = None,
-):
+    output_col_name: str = "",
+) -> DataFrame:
+    """
+    <description>
+    
+    :param df: <description>
+    :type df: DeltaTable or DataFrame 
+    :param cols: <description>
+    :type cols: List[str]
+    :param output_col_name: <description>
+    :type output_col_name: str, defaults to empty string.
+
+    :raises TypeError: Raises type error when no composite key can be found.
+
+    :returns: <description>
+    :rtype: DataFrame 
+    """
     if output_col_name is None:
         output_col_name = "_".join(["md5"] + cols)
     if type(df) == DeltaTable:
