@@ -425,7 +425,7 @@ def append_without_duplicates(
     ).whenNotMatchedInsertAll().execute()
 
 
-def is_composite_key_candidate(delta_table: DeltaTable, cols: List) -> bool:
+def is_composite_key_candidate(delta_table: DeltaTable, cols: List[str]) -> bool:
     """
     <description>
     
