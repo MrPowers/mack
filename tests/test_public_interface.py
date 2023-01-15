@@ -608,8 +608,8 @@ def test_is_composite_key_candidate(tmp_path):
     assert mack.is_composite_key_candidate(delta_table, ["col1", "col2"])
 
 
-def test_describe_table(tmp_path):
-    path = f"{tmp_path}/copy_test_1"
+def test_delta_file_sizes(tmp_path):
+    path = f"{tmp_path}/delta_file_sizes"
     data = [
         (1, "A", "A"),
         (2, "A", "B"),
@@ -634,6 +634,28 @@ def test_describe_table(tmp_path):
     }
 
     assert result == expected_result
+
+
+def test_show_delta_file_sizes(capfd, tmp_path):
+    path = f"{tmp_path}/show_delta_file_sizes"
+    data = [
+        (1, "A", "A"),
+        (2, "A", "B"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    (df.write.format("delta").partitionBy(["col1"]).save(path))
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    mack.show_delta_file_sizes(delta_table)
+
+    out, _ = capfd.readouterr()
+
+    assert (
+        out
+        == "The delta table contains 2 files with a size of 1.32 kB. The average file size is 660.0 B\n"
+    )
 
 
 def test_humanize_bytes_formats_nicely():
