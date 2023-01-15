@@ -427,7 +427,7 @@ Suppose you have the following Delta table:
 +----+----+----+
 ```
 
-Running `mack.with_md5_cols(delta_table, ["col2", "col3"])` on that table will append a `md5_col2_col3` as follows: 
+Running `mack.with_md5_cols(delta_table, ["col2", "col3"])` on that table will append a `md5_col2_col3` as follows:
 
 ```
 +----+----+----+--------------------------------+
@@ -452,7 +452,7 @@ We're leveraging the following terminology defined [here](https://www.databasest
 * **Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.
 * **Foreign key:** an attribute that is used to refer to another record in another table.
 
-## Project philosophy 
+## Project philosophy
 
 The mack library is designed to make common Delta Lake data tasks easier.
 
@@ -483,7 +483,7 @@ There aren't a lot of open source Delta Lake projects.  There are even fewer tha
 ### Stable public interfaces and long term support after 1.0 release
 
 Mack reserves the right to make breaking public interface changes before the 1.0 release.  We'll always minimize breaking changes whenever possible.
- 
+
 After the 1.0 release, Mack will stricly follow Semantic Versioning 2.0 and will only make breaking public interface changes in major releases.  Hopefully 1.0 will be the only major release and there won't have to be any breaking changes.
 
 ### Code design
@@ -491,5 +491,5 @@ After the 1.0 release, Mack will stricly follow Semantic Versioning 2.0 and will
 Here are some of the code design principles used in Mack:
 
 * We avoid classes whenever possible.  Classes make it harder to copy / paste little chunks of code into notebooks.  It's good to [Stop Writing Classes](https://www.youtube.com/watch?v=o9pEzgHorH0).
-* We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate. 
+* We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate.
 * Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
