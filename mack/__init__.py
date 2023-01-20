@@ -492,6 +492,30 @@ def delta_file_sizes(delta_table: DeltaTable) -> Dict[str, int]:
     }
 
 
+def show_delta_file_sizes(delta_table: DeltaTable) -> None:
+    """
+    <description>
+
+    :param delta_table: <description>
+    :type delta_table: DeltaTable
+
+    :returns: <description>
+    :rtype: None
+    """
+    details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
+    size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
+    average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
+
+    humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+    humanized_number_of_files = f"{number_of_files:,}"
+    humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
+
+    print(
+        f"The delta table contains {humanized_number_of_files} files with a size of {humanized_size_in_bytes}."
+        + f" The average file size is {humanized_average_file_size}"
+    )
+
+
 def humanize_bytes(n: int) -> str:
     """
     <description>

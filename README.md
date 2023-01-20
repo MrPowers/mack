@@ -361,6 +361,25 @@ Running `mack.delta_file_sizes(delta_table)` on that table will return:
 "average_file_size_in_bytes": 660}
 ```
 
+## Show Delta File Sizes
+
+The `show_delta_file_sizes` function prints the amount of files, the size of the table, and the average file size for a delta table.
+
+Suppose you have the following Delta Table, partitioned by `col1`:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   A|
+|   2|   A|   B|
++----+----+----+
+```
+
+Running `mack.delta_file_sizes(delta_table)` on that table will print:
+
+`The delta table contains 2 files with a size of 1.32 kB. The average file size is 660.0 B`
+
 ## Humanize Bytes
 
 The `humanize_bytes` function formats an integer representing a number of bytes in an easily human readable format.
