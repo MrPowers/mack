@@ -60,7 +60,8 @@ def test_upserts_with_single_attribute(tmp_path):
     )
     updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
+    delta_table = DeltaTable.forPath(spark, path)
+    mack.type_2_scd_upsert(delta_table, updates_df, "pkey", ["attr"])
 
     actual_df = spark.read.format("delta").load(path)
 
@@ -110,8 +111,9 @@ def test_errors_out_if_base_df_does_not_have_all_required_columns(tmp_path):
     )
     updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
+    delta_table = DeltaTable.forPath(spark, path)
     with pytest.raises(TypeError):
-        mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
+        mack.type_2_scd_upsert(delta_table, updates_df, "pkey", ["attr"])
 
 
 def test_errors_out_if_updates_table_does_not_contain_all_required_columns(tmp_path):
@@ -146,8 +148,9 @@ def test_errors_out_if_updates_table_does_not_contain_all_required_columns(tmp_p
     )
     updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
+    delta_table = DeltaTable.forPath(spark, path)
     with pytest.raises(TypeError):
-        mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr"])
+        mack.type_2_scd_upsert(delta_table, updates_df, "pkey", ["attr"])
 
 
 def test_upserts_based_on_multiple_attributes(tmp_path):
@@ -184,7 +187,8 @@ def test_upserts_based_on_multiple_attributes(tmp_path):
     )
     updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
 
-    mack.type_2_scd_upsert(path, updates_df, "pkey", ["attr1", "attr2"])
+    delta_table = DeltaTable.forPath(spark, path)
+    mack.type_2_scd_upsert(delta_table, updates_df, "pkey", ["attr1", "attr2"])
 
     actual_df = spark.read.format("delta").load(path)
 
@@ -235,8 +239,9 @@ def test_upserts_based_on_date_columns(tmp_path):
     ).toDF("pkey", "attr", "effective_date")
 
     # perform upsert
+    delta_table = DeltaTable.forPath(spark, path)
     mack.type_2_scd_generic_upsert(
-        path, updates_df, "pkey", ["attr"], "cur", "effective_date", "end_date"
+        delta_table, updates_df, "pkey", ["attr"], "cur", "effective_date", "end_date"
     )
 
     actual_df = spark.read.format("delta").load(path)
@@ -287,8 +292,15 @@ def test_upserts_based_on_version_number(tmp_path):
     ).toDF("pkey", "attr", "effective_ver")
 
     # perform upsert
+    delta_table = DeltaTable.forPath(spark, path)
     mack.type_2_scd_generic_upsert(
-        path, updates_df, "pkey", ["attr"], "is_current", "effective_ver", "end_ver"
+        delta_table,
+        updates_df,
+        "pkey",
+        ["attr"],
+        "is_current",
+        "effective_ver",
+        "end_ver",
     )
 
     # show result

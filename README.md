@@ -53,7 +53,7 @@ You'd like to perform an upsert with this data:
 Here's how to perform the upsert:
 
 ```scala
-mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
+mack.type_2_scd_upsert(delta_table, updatesDF, "pkey", ["attr1", "attr2"])
 ```
 
 Here's the table after the upsert:
