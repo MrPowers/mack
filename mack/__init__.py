@@ -9,16 +9,13 @@ from pyspark.sql.window import Window
 
 
 def type_2_scd_upsert(
-    delta_table: DeltaTable,
-    updates_df: DataFrame,
-    primary_key: str,
-    attr_col_names: List[str],
+    path: str, updates_df: DataFrame, primary_key: str, attr_col_names: List[str]
 ) -> None:
     """
     <description>
 
     :param path: <description>
-    :type path: DeltaTable
+    :type path: str
     :param updates_df: <description>
     :type updates_df: DataFrame
     :param primary_key: <description>
@@ -30,7 +27,7 @@ def type_2_scd_upsert(
     :rtype: None
     """
     return type_2_scd_generic_upsert(
-        delta_table,
+        path,
         updates_df,
         primary_key,
         attr_col_names,
@@ -41,7 +38,7 @@ def type_2_scd_upsert(
 
 
 def type_2_scd_generic_upsert(
-    delta_table: DeltaTable,
+    path: str,
     updates_df: DataFrame,
     primary_key: str,
     attr_col_names: List[str],
@@ -52,7 +49,7 @@ def type_2_scd_generic_upsert(
     """
     <description>
 
-    :param delta_table: DeltaTable
+    :param path: <description>
     :type path: str
     :param updates_df: <description>
     :type updates_df: DataFrame
@@ -73,9 +70,10 @@ def type_2_scd_generic_upsert(
     :returns: <description>
     :rtype: None
     """
+    base_table = DeltaTable.forPath(pyspark.sql.SparkSession.getActiveSession(), path)
 
     # validate the existing Delta table
-    base_col_names = delta_table.toDF().columns
+    base_col_names = base_table.toDF().columns
     required_base_col_names = (
         [primary_key]
         + attr_col_names
@@ -106,7 +104,7 @@ def type_2_scd_generic_upsert(
     staged_updates_attrs = " OR ".join(staged_updates_attrs)
     staged_part_1 = (
         updates_df.alias("updates")
-        .join(delta_table.toDF().alias("base"), primary_key)
+        .join(base_table.toDF().alias("base"), primary_key)
         .where(f"base.{is_current_col_name} = true AND ({updates_attrs})")
         .selectExpr("NULL as mergeKey", "updates.*")
     )
@@ -123,7 +121,7 @@ def type_2_scd_generic_upsert(
     }
     res_thing = {**thing, **thing2}
     res = (
-        delta_table.alias("base")
+        base_table.alias("base")
         .merge(
             source=staged_updates.alias("staged_updates"),
             condition=pyspark.sql.functions.expr(
@@ -492,6 +490,30 @@ def delta_file_sizes(delta_table: DeltaTable) -> Dict[str, int]:
         "number_of_files": number_of_files,
         "average_file_size_in_bytes": average_file_size_in_bytes,
     }
+
+
+def show_delta_file_sizes(delta_table: DeltaTable) -> None:
+    """
+    <description>
+
+    :param delta_table: <description>
+    :type delta_table: DeltaTable
+
+    :returns: <description>
+    :rtype: None
+    """
+    details = delta_table.detail().select("numFiles", "sizeInBytes").collect()[0]
+    size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
+    average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
+
+    humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+    humanized_number_of_files = f"{number_of_files:,}"
+    humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
+
+    print(
+        f"The delta table contains {humanized_number_of_files} files with a size of {humanized_size_in_bytes}."
+        + f" The average file size is {humanized_average_file_size}"
+    )
 
 
 def humanize_bytes(n: int) -> str:
