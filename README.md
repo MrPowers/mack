@@ -174,7 +174,7 @@ Suppose you have the following table:
 Run the `drop_duplicates` function:
 
 ```python
-mack.drop_duplicates_pkey(delta_table=deltaTable, duplication_columns=["col1"])
+mack.drop_duplicates(delta_table=deltaTable, duplication_columns=["col1"])
 ```
 
 Here's the ending state of the table:
