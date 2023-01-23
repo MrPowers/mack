@@ -471,6 +471,12 @@ We're leveraging the following terminology defined [here](https://www.databasest
 * **Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.
 * **Foreign key:** an attribute that is used to refer to another record in another table.
 
+## Project maintainers
+
+* Matthew Powers aka [MrPowers](https://github.com/MrPowers)
+* Robert Kossendey aka [robertkossendey](https://github.com/robertkossendey)
+* Souvik Pratiher aka [souvik-databricks](https://github.com/souvik-databricks)
+
 ## Project philosophy
 
 The mack library is designed to make common Delta Lake data tasks easier.
