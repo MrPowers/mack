@@ -76,6 +76,43 @@ You can leverage the upsert code if your SCD table meets these requirements:
 * Any change in an attribute column triggers an upsert
 * SCD logic is exposed via `effective_time`, `end_time` and `is_current` column (you can also use date or version columns for SCD upserts)
 
+## Order Columns
+
+The `order_columns` function reorders the columns of a DataFrame so that they can be indexed for
+Data Skipping. It moves all the numeric and time columns to the front. You can use the user_defined_columns parameter if you have some columns
+that should be indexed regardless of their data type. The Data Skipping configuration of the SparkSession is automatically
+set to the length of indexable columns.
+
+Suppose you have the following table:
+
+```
++----+----+-------------------+-----+-----+----+
+|col1|col2|               col3| col4| col5|col6|
++----+----+-------------------+-----+-----+----+
+|   1|   a|2019-01-01 00:00:00|test1|test4| 3.0|
+|   2|   b|2019-01-01 00:00:00|test2|test5| 3.0|
+|   3|   c|2019-01-01 00:00:00|test3|test6| 3.0|
++----+----+-------------------+-----+-----+----+
+```
+
+Run the `order_columns` function:
+
+```python
+mack.order_columns(data_frame, ["col4"])
+```
+
+Here's the ending state of the table:
+
+```
++-----+----+-------------------+----+----+-----+
+| col4|col1|               col3|col6|col2| col5|
++-----+----+-------------------+----+----+-----+
+|test1|   1|2019-01-01 00:00:00| 3.0|   a|test4|
+|test2|   2|2019-01-01 00:00:00| 3.0|   b|test5|
+|test3|   3|2019-01-01 00:00:00| 3.0|   c|test6|
++-----+----+-------------------+----+----+-----+
+```
+
 ## Kill duplicates
 
 The `kill_duplicate` function completely removes all duplicate rows from a Delta table.

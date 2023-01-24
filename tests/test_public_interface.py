@@ -753,3 +753,32 @@ def test_with_md5_cols(tmp_path):
     chispa.assert_df_equality(
         with_md5, expected_df, ignore_row_order=True, ignore_schema=True
     )
+
+
+def test_order_columns():
+    data = [
+        (1, "a", dt(2019, 1, 1), "test1", "test4", 3.0),
+        (2, "b", dt(2019, 1, 1), "test2", "test5", 3.0),
+        (3, "c", dt(2019, 1, 1), "test3", "test6", 3.0),
+    ]
+    df = spark.createDataFrame(
+        data,
+        [
+            "col1",
+            "col2",
+            "col3",
+            "col4",
+            "col5",
+            "col6",
+        ],
+    )
+
+    actual_df = mack.order_columns(df, ["col4"])
+
+    df.show()
+
+    expected_df = df.select("col4", "col1", "col3", "col6", "col2", "col5")
+
+    expected_df.show()
+
+    chispa.assert_df_equality(actual_df, expected_df)

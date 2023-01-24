@@ -3,8 +3,17 @@ from typing import List, Union, Dict
 
 from delta import DeltaTable
 import pyspark
+from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col, concat_ws, count, md5, row_number
+from pyspark.sql.types import (
+    DateType,
+    LongType,
+    TimestampType,
+    FloatType,
+    IntegerType,
+    DoubleType,
+)
 from pyspark.sql.window import Window
 
 
@@ -596,3 +605,53 @@ def with_md5_cols(
     if type(df) == DeltaTable:
         df = df.toDF()
     return df.withColumn(output_col_name, md5(concat_ws("||", *cols)))
+
+
+def order_columns(df: DataFrame, user_defined_columns: List[str] = None) -> DataFrame:
+    """
+    <description>
+
+    :param df: <description>
+    :type df: DataFrame
+    :param user_defined_columns: <description>
+    :type user_defined_columns: List[str]
+
+    :returns: <description>
+    :rtype: DataFrame
+    """
+
+    if user_defined_columns is None:
+        user_defined_columns = []
+
+    indexable_data_types = [
+        IntegerType,
+        FloatType,
+        DoubleType,
+        LongType,
+        TimestampType,
+        DateType,
+    ]
+
+    remaining_columns = [
+        field for field in df.schema.fields if field.name not in user_defined_columns
+    ]
+
+    indexable_cols = [
+        field.name
+        for field in remaining_columns
+        if type(field.dataType) in indexable_data_types
+    ]
+    non_indexable_cols = [
+        field.name
+        for field in remaining_columns
+        if not (type(field.dataType) in indexable_data_types)
+    ]
+
+    num_cols = len(user_defined_columns + indexable_cols)
+
+    SparkSession.getActiveSession().conf.set(
+        "spark.databricks.delta.properties.defaults.dataSkippingNumIndexedCols",
+        str(num_cols),
+    )
+
+    return df.select(*user_defined_columns, *indexable_cols, *non_indexable_cols)
