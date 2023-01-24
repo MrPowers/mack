@@ -775,10 +775,6 @@ def test_order_columns():
 
     actual_df = mack.order_columns(df, ["col4"])
 
-    df.show()
-
     expected_df = df.select("col4", "col1", "col3", "col6", "col2", "col5")
-
-    expected_df.show()
 
     chispa.assert_df_equality(actual_df, expected_df)
