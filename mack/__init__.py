@@ -623,7 +623,7 @@ def order_columns(df: DataFrame, user_defined_columns: List[str] = None) -> Data
     if user_defined_columns is None:
         user_defined_columns = []
 
-    indexable_data_types = [
+    efficient_index_types = [
         IntegerType,
         FloatType,
         DoubleType,
@@ -639,12 +639,12 @@ def order_columns(df: DataFrame, user_defined_columns: List[str] = None) -> Data
     indexable_cols = [
         field.name
         for field in remaining_columns
-        if type(field.dataType) in indexable_data_types
+        if type(field.dataType) in efficient_index_types
     ]
     non_indexable_cols = [
         field.name
         for field in remaining_columns
-        if not (type(field.dataType) in indexable_data_types)
+        if not (type(field.dataType) in efficient_index_types)
     ]
 
     num_cols = len(user_defined_columns + indexable_cols)
