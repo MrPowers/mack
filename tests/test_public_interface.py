@@ -778,3 +778,10 @@ def test_order_columns():
     expected_df = df.select("col4", "col1", "col3", "col6", "col2", "col5")
 
     chispa.assert_df_equality(actual_df, expected_df)
+
+    def user_defined_sorting(cols):
+        return sorted(cols)
+
+    user_sorted_df = mack.order_columns(df, user_defined_order=user_defined_sorting)
+
+    chispa.assert_df_equality(user_sorted_df, df)
