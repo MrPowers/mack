@@ -529,11 +529,11 @@ def humanize_bytes(n: int) -> str:
     :rtype: str
     """
     for prefix, k in (
-        ("PB", 1e15),
-        ("TB", 1e12),
-        ("GB", 1e9),
-        ("MB", 1e6),
-        ("kB", 1e3),
+        ("PB", 1024**5),
+        ("TB", 1024**4),
+        ("GB", 1024**3),
+        ("MB", 1024**2),
+        ("kB", 1024),
     ):
         if n >= k * 0.9:
             return f"{n / k:.2f} {prefix}"
