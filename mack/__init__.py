@@ -234,37 +234,19 @@ def drop_duplicates_pkey(
 
     q = []
 
-    # Get all the duplicate records
-    if len(duplication_columns) > 0:
-        duplicate_records = (
-            data_frame.withColumn(
-                "row_number",
-                row_number().over(
-                    Window().partitionBy(duplication_columns).orderBy(primary_key)
-                ),
-            )
-            .filter(col("row_number") > 1)
-            .drop("row_number")
-            .distinct()
+    duplicate_records = (
+        data_frame.withColumn(
+            "row_number",
+            row_number().over(
+                Window().partitionBy(duplication_columns).orderBy(primary_key)
+            ),
         )
-        for column in required_columns:
-            q.append(f"old.{column} = new.{column}")
-
-    else:
-        duplicate_records = (
-            data_frame.withColumn(
-                "row_number",
-                row_number().over(
-                    Window().partitionBy(primary_key).orderBy(primary_key)
-                ),
-            )
-            .filter(col("row_number") > 1)
-            .drop("row_number")
-            .distinct()
-        )
-
-        for column in duplicate_records.columns + [primary_key]:
-            q.append(f"old.{column} = new.{column}")
+        .filter(col("row_number") > 1)
+        .drop("row_number")
+        .distinct()
+    )
+    for column in required_columns:
+        q.append(f"old.{column} = new.{column}")
 
     q = " AND ".join(q)
 
