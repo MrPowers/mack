@@ -311,6 +311,7 @@ Here is data to be appended:
 +----+----+----+
 |   2|   R|   T| # duplicate col1
 |   8|   A|   B|
+|   8|   C|   D| # duplicate col1
 |  10|   X|   Y|
 +----+----+----+
 ```
