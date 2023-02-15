@@ -468,6 +468,7 @@ def test_append_without_duplicates_single_column(tmp_path):
         [
             (2, "R", "T"),  # duplicate
             (8, "A", "B"),
+            (8, "B", "C"),  # duplicate
             (10, "X", "Y"),
         ],
         ["col1", "col2", "col3"],

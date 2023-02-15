@@ -405,9 +405,11 @@ def append_without_duplicates(
 
     condition_columns = " AND ".join(condition_columns)
 
+    deduplicated_append_df = append_df.drop_duplicates(p_keys)
+
     # Insert records without duplicates
     delta_table.alias("old").merge(
-        append_df.alias("new"), condition_columns
+        deduplicated_append_df.alias("new"), condition_columns
     ).whenNotMatchedInsertAll().execute()
 
 
