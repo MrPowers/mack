@@ -519,3 +519,10 @@ Here are some of the code design principles used in Mack:
 * We avoid classes whenever possible.  Classes make it harder to copy / paste little chunks of code into notebooks.  It's good to [Stop Writing Classes](https://www.youtube.com/watch?v=o9pEzgHorH0).
 * We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate.
 * Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
+
+## Community
+
+### Blogs
+
+- [Daniel Beach (Confessions of a Data Guy): Simplify Delta Lake Complexity with mack.](https://www.confessionsofadataguy.com/simplify-delta-lake-complexity-with-mack/)
+- [Bartosz Konieczny (waitingforcode): Simplified Delta Lake operations with Mack](https://www.waitingforcode.com/delta-lake/simplified-delta-lake-operations-mack/read)
