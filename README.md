@@ -1,4 +1,4 @@
-<h1 style="font-size:40px;">mack</h1>
+# mack
 
 ![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/ci.yml/badge.svg)
 ![![image](https://github.com/MrPowers/mack/workflows/build/badge.svg)](https://github.com/MrPowers/mack/actions/workflows/black.yml/badge.svg)
@@ -10,36 +10,7 @@ mack provides a variety of helper methods that make it easy for you to perform c
 
 ![mack](https://github.com/MrPowers/mack/blob/main/images/mack.jpg)
 
-<h1>Table of Content</h1>
-
-- [Setup](#setup)
-- [Usage](#usage)
-  - [Type 2 SCD Upserts](#type-2-scd-upserts)
-  - [Kill duplicates](#kill-duplicates)
-  - [Drop duplicates with Primary Key](#drop-duplicates-with-primary-key)
-  - [Drop duplicates](#drop-duplicates)
-  - [Copy table](#copy-table)
-  - [Validate append](#validate-append)
-  - [Append data without duplicates](#append-data-without-duplicates)
-  - [Delta File Sizes](#delta-file-sizes)
-  - [Show Delta File Sizes](#show-delta-file-sizes)
-  - [Humanize Bytes](#humanize-bytes)
-  - [Is Composite Key Candidate](#is-composite-key-candidate)
-  - [Find Composite Key Candidates in the Delta table](#find-composite-key-candidates-in-the-delta-table)
-  - [Append md5 column](#append-md5-column)
-- [Dictionary](#dictionary)
-- [Project maintainers](#project-maintainers)
-- [Project philosophy](#project-philosophy)
-  - [Exposing nice public interfaces](#exposing-nice-public-interfaces)
-  - [Minimal dependencies](#minimal-dependencies)
-  - [Provide best practices examples for the community](#provide-best-practices-examples-for-the-community)
-  - [Stable public interfaces and long term support after 1.0 release](#stable-public-interfaces-and-long-term-support-after-10-release)
-  - [Code design](#code-design)
-- [Community](#community)
-  - [Blogs](#blogs)
-
-
-# Setup
+## Setup
 
 Install mack with `pip install mack`.
 
@@ -50,8 +21,6 @@ import mack
 
 mack.type_2_scd_upsert(path, updatesDF, "pkey", ["attr1", "attr2"])
 ```
-
-# Usage
 
 ## Type 2 SCD Upserts
 
@@ -490,7 +459,7 @@ Running `mack.with_md5_cols(delta_table, ["col2", "col3"])` on that table will a
 +----+----+----+--------------------------------+
 ```
 
-# Dictionary
+## Dictionary
 
 We're leveraging the following terminology defined [here](https://www.databasestar.com/database-keys/#:~:text=Natural%20key%3A%20an%20attribute%20that,can%20uniquely%20identify%20a%20row).
 
@@ -503,13 +472,13 @@ We're leveraging the following terminology defined [here](https://www.databasest
 * **Unique key:** an attribute that can be unique on the table. Can also be called an alternate key.
 * **Foreign key:** an attribute that is used to refer to another record in another table.
 
-# Project maintainers
+## Project maintainers
 
 * Matthew Powers aka [MrPowers](https://github.com/MrPowers)
 * Robert Kossendey aka [robertkossendey](https://github.com/robertkossendey)
 * Souvik Pratiher aka [souvik-databricks](https://github.com/souvik-databricks)
 
-# Project philosophy
+## Project philosophy
 
 The mack library is designed to make common Delta Lake data tasks easier.
 
@@ -519,31 +488,31 @@ If you don't want to add a dependency to your project, you can also easily copy 
 
 Let's look at some of the reasons you may want to add mack as a dependency.
 
-## Exposing nice public interfaces
+### Exposing nice public interfaces
 
 The public interface (and only the public interface) is available via the `mack` namespace.
 
 When you run `import mack`, you can access the entirety of the public interface.  No private implementation details are exposed in the `mack` namespace.
 
-## Minimal dependencies
+### Minimal dependencies
 
 Mack only depends on Spark & Delta Lake.  No other dependencies will be added to Mack.
 
 Spark users leverage a variety of runtimes and it's not always easy to add a dependency.  You can run `pip install mack` and won't have to worry about resolving a lot of dependency conflicts.  You can also Just attach a mack wheel file to a cluster to leverage the project.
 
-## Provide best practices examples for the community
+### Provide best practices examples for the community
 
 Mack strives to be a good example codebase for the PySpark / Delta Lake community.
 
 There aren't a lot of open source Delta Lake projects.  There are even fewer that use good software engineering practices like CI and unit testing.  You can use mack to help guide your design decisions in proprietary code repos.
 
-## Stable public interfaces and long term support after 1.0 release
+### Stable public interfaces and long term support after 1.0 release
 
 Mack reserves the right to make breaking public interface changes before the 1.0 release.  We'll always minimize breaking changes whenever possible.
 
 After the 1.0 release, Mack will stricly follow Semantic Versioning 2.0 and will only make breaking public interface changes in major releases.  Hopefully 1.0 will be the only major release and there won't have to be any breaking changes.
 
-## Code design
+### Code design
 
 Here are some of the code design principles used in Mack:
 
@@ -551,9 +520,9 @@ Here are some of the code design principles used in Mack:
 * We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate.
 * Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
 
-# Community
+## Community
 
-## Blogs
+### Blogs
 
 - [Daniel Beach (Confessions of a Data Guy): Simplify Delta Lake Complexity with mack.](https://www.confessionsofadataguy.com/simplify-delta-lake-complexity-with-mack/)
 - [Bartosz Konieczny (waitingforcode): Simplified Delta Lake operations with Mack](https://www.waitingforcode.com/delta-lake/simplified-delta-lake-operations-mack/read)
