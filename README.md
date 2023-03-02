@@ -520,6 +520,14 @@ Here are some of the code design principles used in Mack:
 * We try to make functions that are easy to copy.  We do this by limiting functions that depend on other functions or classes.  We'd rather nest a single use function in a public interface method than make it separate.
 * Develop and then abstract.  All code goes in a single file till the right abstractions become apparent.  We'd rather have a large file than the wrong abstractions.
 
+### Docker Environment
+The `Dockerfile` and `docker-compose` files provide a containerized way to run and develop
+with `mack`.
+
+- The first time run `docker build --tag=mack .` to build the image.
+- To execute the unit tests inside the `Docker` container, run `docker-compose up test`
+- To drop into the running `Docker` container to develop, run `docker run -it mack /bin/bash`
+
 ## Community
 
 ### Blogs
