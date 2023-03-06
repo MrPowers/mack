@@ -459,6 +459,17 @@ Running `mack.with_md5_cols(delta_table, ["col2", "col3"])` on that table will a
 +----+----+----+--------------------------------+
 ```
 
+## Get Latest Delta Table Version
+
+The `latest_version` function gets the most current Delta
+Table version number and returns it.
+
+```python
+delta_table = DeltaTable.forPath(spark, path)
+mack.latest_version(delta_table)
+>> 2
+```
+
 ## Dictionary
 
 We're leveraging the following terminology defined [here](https://www.databasestar.com/database-keys/#:~:text=Natural%20key%3A%20an%20attribute%20that,can%20uniquely%20identify%20a%20row).
