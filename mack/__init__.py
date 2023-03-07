@@ -4,7 +4,7 @@ from typing import List, Union, Dict
 from delta import DeltaTable
 import pyspark
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import col, concat_ws, count, md5, row_number
+from pyspark.sql.functions import col, concat_ws, count, md5, row_number, max
 from pyspark.sql.window import Window
 
 
@@ -580,3 +580,17 @@ def with_md5_cols(
     if type(df) == DeltaTable:
         df = df.toDF()
     return df.withColumn(output_col_name, md5(concat_ws("||", *cols)))
+
+
+def latest_version(delta_table: DeltaTable) -> float:
+    """
+    <description>
+
+    :param delta_table: <description>
+    :type delta_table: DeltaTable
+
+    :returns: <description>
+    :rtype: float
+    """
+    version = delta_table.history().agg(max("version")).collect()[0][0]
+    return version

@@ -754,3 +754,29 @@ def test_with_md5_cols(tmp_path):
     chispa.assert_df_equality(
         with_md5, expected_df, ignore_row_order=True, ignore_schema=True
     )
+
+def test_lastest_version(tmp_path):
+    path = f"{tmp_path}/latestversion"
+
+    data = [
+        (1, "a", None),
+        (2, "b", "b"),
+        (3, "c", "c"),
+    ]
+    df = spark.createDataFrame(
+        data,
+        [
+            "col1",
+            "col2",
+            "col3",
+        ],
+    )
+    df.write.format("delta").save(path)
+
+    # write the same dataframe twice
+    df.write.format("delta").mode("append").save(path)
+    df.write.format("delta").mode("append").save(path)
+
+    delta_table = DeltaTable.forPath(spark, path)
+    latest_version = mack.latest_version(delta_table)
+    assert latest_version == 2
