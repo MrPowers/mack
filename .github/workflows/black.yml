@@ -2,6 +2,8 @@ name: Black format check
 
 on:
   push:
+    branches:
+      - main
   pull_request:
     branches:
     - main
