@@ -3,6 +3,9 @@ name: Flake8 check
 on:
   push:
     branches:
+      - main
+  pull_request:
+    branches:
     - main
 
 
