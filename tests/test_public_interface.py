@@ -755,6 +755,7 @@ def test_with_md5_cols(tmp_path):
         with_md5, expected_df, ignore_row_order=True, ignore_schema=True
     )
 
+
 def test_lastest_version(tmp_path):
     path = f"{tmp_path}/latestversion"
 
