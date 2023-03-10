@@ -494,7 +494,9 @@ def delta_file_sizes(delta_table: DeltaTable) -> Dict[str, int]:
     }
 
 
-def show_delta_file_sizes(delta_table: DeltaTable, humanize_binary: bool=False) -> None:
+def show_delta_file_sizes(
+    delta_table: DeltaTable, humanize_binary: bool = False
+) -> None:
     """
     <description>
 
@@ -511,11 +513,11 @@ def show_delta_file_sizes(delta_table: DeltaTable, humanize_binary: bool=False) 
     average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
 
     if humanize_binary:
-      humanized_size_in_bytes = humanize_bytes_binary(size_in_bytes)
-      humanized_average_file_size = humanize_bytes_binary(average_file_size_in_bytes)
+        humanized_size_in_bytes = humanize_bytes_binary(size_in_bytes)
+        humanized_average_file_size = humanize_bytes_binary(average_file_size_in_bytes)
     else:
-      humanized_size_in_bytes = humanize_bytes(size_in_bytes)
-      humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
+        humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+        humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
     humanized_number_of_files = f"{number_of_files:,}"
 
     print(
@@ -568,6 +570,7 @@ def humanize_bytes_binary(n: int) -> str:
         if n >= k * 0.9:
             return f"{n / k:.2f} {prefix}"
     return f"{n} B"
+
 
 def find_composite_key_candidates(
     df: Union[DeltaTable, DataFrame], exclude_cols: List[str] = None
