@@ -470,6 +470,79 @@ mack.latest_version(delta_table)
 >> 2
 ```
 
+## Append data with constraints
+
+The `constraint_append` function helps to append records to an existing Delta table even if there are records in the append dataframe that violate table constraints, these records are appended to an existing quarantine Delta table instead of the target table.
+
+Suppose you have the following target Delta table with these constraints:
+
+```
+col1_constraint: (col1 > 0)
+col2_constraint: (col2 != 'Z')
+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   B|
+|   2|   C|   D|
+|   3|   E|   F|
++----+----+----+
+```
+
+Suppose you have a quarantine Delta table with the same schema but without the constraints.
+
+Here is data to be appended:
+
+```
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   0|   Z|   Z| # violates both col1_constraint and col2_constraint
+|   4|   A|   B|
+|   5|   C|   D|
+|   6|   E|   F|
+|   9|   G|   G|
+|  11|   Z|   Z| # violates col2_constraint
++----+----+----+
+```
+
+Run the `constraint_append` function:
+
+```python
+mack.constraint_append(delta_table, append_df, quarantine_table)
+```
+
+Here's the ending result in delta_table:
+
+```
+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   1|   A|   B|
+|   2|   C|   D|
+|   3|   E|   F|
+|   4|   A|   B|
+|   5|   C|   D|
+|   6|   E|   F|
+|   9|   G|   G|
++----+----+----+
+```
+
+Here's the ending result in quarantine_table:
+
+```
+
++----+----+----+
+|col1|col2|col3|
++----+----+----+
+|   0|   Z|   Z|
+|  11|   Z|   Z|
++----+----+----+
+```
+
+Notice that the records that violated either of the constraints are appended to the quarantine table all other records are appended to the target table and the append has not failed.  If a normal append operation was run, then it would have failed on the constraint violation.
+
 ## Dictionary
 
 We're leveraging the following terminology defined [here](https://www.databasestar.com/database-keys/#:~:text=Natural%20key%3A%20an%20attribute%20that,can%20uniquely%20identify%20a%20row).
