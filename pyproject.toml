@@ -36,5 +36,5 @@ exclude = '''
 )/
 '''
 
-[tool.flake8]
+[tool.ruff]
 max-line-length = 150

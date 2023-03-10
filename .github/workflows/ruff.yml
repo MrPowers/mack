@@ -1,4 +1,4 @@
-name: Flake8 check
+name: ruff check
 
 on:
   push:
@@ -20,8 +20,7 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: 3.9
-    - name: flake8 Lint
-      uses: py-actions/flake8@v2
+    - name: ruff Lint
+      uses: jpetrucciani/ruff-check@main
       with:
         max-line-length: "150"
-        plugins: "flake8-bugbear==22.12.6 pep8-naming flake8-pyproject"
