@@ -36,3 +36,6 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.flake8]
+line-length = 150
