@@ -23,4 +23,4 @@ jobs:
     - name: ruff Lint
       uses: jpetrucciani/ruff-check@main
       with:
-        line-length: "150"
+        line-length: 150
