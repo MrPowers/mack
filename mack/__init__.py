@@ -478,12 +478,16 @@ def delta_file_sizes(delta_table: DeltaTable) -> Dict[str, int]:
     }
 
 
-def show_delta_file_sizes(delta_table: DeltaTable) -> None:
+def show_delta_file_sizes(
+    delta_table: DeltaTable, humanize_binary: bool = False
+) -> None:
     """
     <description>
 
     :param delta_table: <description>
     :type delta_table: DeltaTable
+    :param humanize_binary: <description>
+    :type humanize_binary: bool
 
     :returns: <description>
     :rtype: None
@@ -492,9 +496,13 @@ def show_delta_file_sizes(delta_table: DeltaTable) -> None:
     size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
     average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
 
-    humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+    if humanize_binary:
+        humanized_size_in_bytes = humanize_bytes_binary(size_in_bytes)
+        humanized_average_file_size = humanize_bytes_binary(average_file_size_in_bytes)
+    else:
+        humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+        humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
     humanized_number_of_files = f"{number_of_files:,}"
-    humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
 
     print(
         f"The delta table contains {humanized_number_of_files} files with a size of {humanized_size_in_bytes}."
@@ -512,12 +520,36 @@ def humanize_bytes(n: int) -> str:
     :returns: <description>
     :rtype: str
     """
+    kilobyte = 1000
     for prefix, k in (
-        ("PB", 1e15),
-        ("TB", 1e12),
-        ("GB", 1e9),
-        ("MB", 1e6),
-        ("kB", 1e3),
+        ("PB", kilobyte**5),
+        ("TB", kilobyte**4),
+        ("GB", kilobyte**3),
+        ("MB", kilobyte**2),
+        ("kB", kilobyte**1),
+    ):
+        if n >= k * 0.9:
+            return f"{n / k:.2f} {prefix}"
+    return f"{n} B"
+
+
+def humanize_bytes_binary(n: int) -> str:
+    """
+    <description>
+
+    :param n: <description>
+    :type n: int
+
+    :returns: <description>
+    :rtype: str
+    """
+    kibibyte = 1024
+    for prefix, k in (
+        ("PB", kibibyte**5),
+        ("TB", kibibyte**4),
+        ("GB", kibibyte**3),
+        ("MB", kibibyte**2),
+        ("kB", kibibyte**1),
     ):
         if n >= k * 0.9:
             return f"{n / k:.2f} {prefix}"

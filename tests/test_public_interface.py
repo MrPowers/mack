@@ -678,6 +678,13 @@ def test_humanize_bytes_formats_nicely():
     assert mack.humanize_bytes(1234567890000000) == "1.23 PB"
 
 
+def test_humanize_bytes_binary_formats_nicely():
+    assert mack.humanize_bytes_binary(12345678) == "11.77 MB"
+    assert mack.humanize_bytes_binary(1234567890) == "1.15 GB"
+    assert mack.humanize_bytes_binary(1234567890000) == "1.12 TB"
+    assert mack.humanize_bytes_binary(1234567890000000) == "1.10 PB"
+
+
 def test_find_composite_key(tmp_path):
     path = f"{tmp_path}/find_composite_key"
     data = [
