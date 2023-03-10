@@ -7,7 +7,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-deltalake = "^0.7.0"
 ruff = "^0.0.254"
 
 [tool.poetry.dev-dependencies]
@@ -37,6 +36,3 @@ exclude = '''
   | dist
 )/
 '''
-
-[tool.ruff]
-max-line-length = 150
