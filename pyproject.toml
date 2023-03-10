@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 deltalake = "^0.7.0"
+ruff = "^0.0.254"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.20.0"

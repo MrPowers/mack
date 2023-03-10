@@ -22,5 +22,3 @@ jobs:
         python-version: 3.9
     - name: ruff Lint
       uses: jpetrucciani/ruff-check@main
-      with:
-        max-line-length: "150"
