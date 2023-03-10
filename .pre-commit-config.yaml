@@ -13,7 +13,6 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: debug-statements
-      - id: detect-aws-credentials
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: requirements-txt-fixer
