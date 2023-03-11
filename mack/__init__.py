@@ -626,3 +626,62 @@ def latest_version(delta_table: DeltaTable) -> float:
     """
     version = delta_table.history().agg(max("version")).collect()[0][0]
     return version
+
+
+def constraint_append(
+    delta_table: DeltaTable, append_df: DataFrame, quarantine_table: DeltaTable
+):
+    """
+    <description>
+
+    :param delta_table: <description>
+    :type delta_table: DeltaTable
+    :param append_df: <description>
+    :type append_df: DataFrame
+    :param quarantine_table: <description>
+    :type quarantine_table: DeltaTable
+
+    :raises TypeError: Raises type error when input arguments have an invalid type.
+    :raises TypeError: Raises type error when delta_table has no constraints.
+    """
+
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified for delta_table.")
+
+    if not isinstance(append_df, DataFrame):
+        raise TypeError("You must provide a DataFrame that is to be appended.")
+
+    if not isinstance(quarantine_table, DeltaTable):
+        raise TypeError(
+            "An existing delta table must be specified for quarantine_table."
+        )
+
+    properties = delta_table.detail().select("properties").collect()[0]["properties"]
+    constraints = [
+        v for k, v in properties.items() if k.startswith("delta.constraints")
+    ]
+
+    if not constraints:
+        raise TypeError("There are no constraints present in the target delta table")
+
+    target_details = delta_table.detail().select("location").collect()[0]
+    quarantine_details = quarantine_table.detail().select("location").collect()[0]
+
+    filtered_df = append_df.filter(" and ".join([c for c in constraints]))
+    quarantine_df = append_df.filter(
+        "not (" + " and ".join([c for c in constraints]) + ")"
+    )
+
+    (
+        filtered_df.write.format("delta")
+        .mode("append")
+        .option("mergeSchema", "true")
+        .save(target_details["location"])
+    )
+
+    (
+        quarantine_df.write.format("delta")
+        .mode("append")
+        .option("mergeSchema", "true")
+        .save(quarantine_details["location"])
+    )
