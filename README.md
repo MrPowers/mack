@@ -8,7 +8,7 @@
 
 mack provides a variety of helper methods that make it easy for you to perform common Delta Lake operations.
 
-![mack](https://github.com/MrPowers/mack/blob/main/images/mack.jpg)
+![mack](https://github.com/MrPowers/mack/raw/main/images/mack.jpg)
 
 ## Setup
 
