@@ -678,6 +678,13 @@ def test_humanize_bytes_formats_nicely():
     assert mack.humanize_bytes(1234567890000000) == "1.23 PB"
 
 
+def test_humanize_bytes_binary_formats_nicely():
+    assert mack.humanize_bytes_binary(12345678) == "11.77 MB"
+    assert mack.humanize_bytes_binary(1234567890) == "1.15 GB"
+    assert mack.humanize_bytes_binary(1234567890000) == "1.12 TB"
+    assert mack.humanize_bytes_binary(1234567890000000) == "1.10 PB"
+
+
 def test_find_composite_key(tmp_path):
     path = f"{tmp_path}/find_composite_key"
     data = [
@@ -781,3 +788,168 @@ def test_lastest_version(tmp_path):
     delta_table = DeltaTable.forPath(spark, path)
     latest_version = mack.latest_version(delta_table)
     assert latest_version == 2
+
+
+def test_constraint_append_no_constraint(tmp_path):
+
+    target_path = f"{tmp_path}/constraint_append/target_table"
+    quarantine_path = f"{tmp_path}/constraint_append/quarantine_table"
+
+    data = [
+        (1, "A", "B"),
+        (2, "C", "D"),
+        (3, "E", "F"),
+    ]
+
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+    df.write.format("delta").save(target_path)
+
+    df2 = spark.createDataFrame([], df.schema)
+    df2.write.format("delta").save(quarantine_path)
+
+    target_table = DeltaTable.forPath(spark, target_path)
+    append_df = spark.createDataFrame([], df.schema)
+    quarantine_table = DeltaTable.forPath(spark, quarantine_path)
+
+    # demonstrate that the function cannot be run with target table not having constraints
+    with pytest.raises(
+        TypeError, match="There are no constraints present in the target delta table"
+    ):
+        mack.constraint_append(target_table, append_df, quarantine_table)
+
+
+def test_constraint_append_multi_constraint(tmp_path):
+
+    target_path = f"{tmp_path}/constraint_append/target_table"
+    quarantine_path = f"{tmp_path}/constraint_append/quarantine_table"
+
+    data = [
+        (1, "A", "B"),
+        (2, "C", "D"),
+        (3, "E", "F"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    df.write.format("delta").save(target_path)
+
+    df2 = spark.createDataFrame([], df.schema)
+    df2.write.format("delta").save(quarantine_path)
+
+    target_table = DeltaTable.forPath(spark, target_path)
+
+    # adding two constraints
+    spark.sql(
+        f"ALTER TABLE delta.`{target_path}` ADD CONSTRAINT col1_constraint CHECK (col1 > 0) "
+    )
+    spark.sql(
+        f"ALTER TABLE delta.`{target_path}` ADD CONSTRAINT col2_constraint CHECK (col2 != 'Z') "
+    )
+
+    # adding other table properties
+    spark.sql(
+        f"ALTER TABLE delta.`{target_path}` SET TBLPROPERTIES('this.is.my.key' = 12, this.is.my.key2 = true)"
+    )
+
+    append_data = [
+        (0, "Z", "Z"),
+        (4, "A", "B"),
+        (5, "C", "D"),
+        (6, "E", "F"),
+        (9, "G", "G"),
+        (11, "Z", "Z"),
+    ]
+    append_df = spark.createDataFrame(append_data, ["col1", "col2", "col3"])
+
+    # testing with two constraints
+    target_table = DeltaTable.forPath(spark, target_path)
+    quarantine_table = DeltaTable.forPath(spark, quarantine_path)
+    mack.constraint_append(target_table, append_df, quarantine_table)
+
+    expected_data = [
+        (1, "A", "B"),
+        (2, "C", "D"),
+        (3, "E", "F"),
+        (4, "A", "B"),
+        (5, "C", "D"),
+        (6, "E", "F"),
+        (9, "G", "G"),
+    ]
+    expected_df = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
+
+    appended_data = spark.read.format("delta").load(target_path)
+    chispa.assert_df_equality(appended_data, expected_df, ignore_row_order=True)
+
+    expected_quarantined_data = [(0, "Z", "Z"), (11, "Z", "Z")]
+    expected_quarantined_df = spark.createDataFrame(
+        expected_quarantined_data, ["col1", "col2", "col3"]
+    )
+
+    quarantined_data = spark.read.format("delta").load(quarantine_path)
+    chispa.assert_df_equality(
+        quarantined_data, expected_quarantined_df, ignore_row_order=True
+    )
+
+
+def test_constraint_append_single_constraint(tmp_path):
+
+    target_path = f"{tmp_path}/constraint_append/target_table"
+    quarantine_path = f"{tmp_path}/constraint_append/quarantine_table"
+
+    data = [
+        (1, "A", "B"),
+        (2, "C", "D"),
+        (3, "E", "F"),
+    ]
+    df = spark.createDataFrame(data, ["col1", "col2", "col3"])
+
+    df.write.format("delta").save(target_path)
+
+    df2 = spark.createDataFrame([], df.schema)
+    df2.write.format("delta").save(quarantine_path)
+
+    target_table = DeltaTable.forPath(spark, target_path)
+
+    # adding two constraints
+    spark.sql(
+        f"ALTER TABLE delta.`{target_path}` ADD CONSTRAINT col1_constraint CHECK (col1 > 0) "
+    )
+
+    append_data = [
+        (0, "Z", "Z"),
+        (4, "A", "B"),
+        (5, "C", "D"),
+        (6, "E", "F"),
+        (9, "G", "G"),
+        (11, "Z", "Z"),
+    ]
+    append_df = spark.createDataFrame(append_data, ["col1", "col2", "col3"])
+
+    # testing with two constraints
+    target_table = DeltaTable.forPath(spark, target_path)
+    quarantine_table = DeltaTable.forPath(spark, quarantine_path)
+    mack.constraint_append(target_table, append_df, quarantine_table)
+
+    expected_data = [
+        (1, "A", "B"),
+        (2, "C", "D"),
+        (3, "E", "F"),
+        (4, "A", "B"),
+        (5, "C", "D"),
+        (6, "E", "F"),
+        (9, "G", "G"),
+        (11, "Z", "Z"),
+    ]
+    expected_df = spark.createDataFrame(expected_data, ["col1", "col2", "col3"])
+
+    appended_data = spark.read.format("delta").load(target_path)
+    chispa.assert_df_equality(appended_data, expected_df, ignore_row_order=True)
+
+    expected_quarantined_data = [(0, "Z", "Z")]
+    expected_quarantined_df = spark.createDataFrame(
+        expected_quarantined_data, ["col1", "col2", "col3"]
+    )
+
+    quarantined_data = spark.read.format("delta").load(quarantine_path)
+    chispa.assert_df_equality(
+        quarantined_data, expected_quarantined_df, ignore_row_order=True
+    )

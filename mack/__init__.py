@@ -478,12 +478,16 @@ def delta_file_sizes(delta_table: DeltaTable) -> Dict[str, int]:
     }
 
 
-def show_delta_file_sizes(delta_table: DeltaTable) -> None:
+def show_delta_file_sizes(
+    delta_table: DeltaTable, humanize_binary: bool = False
+) -> None:
     """
     <description>
 
     :param delta_table: <description>
     :type delta_table: DeltaTable
+    :param humanize_binary: <description>
+    :type humanize_binary: bool
 
     :returns: <description>
     :rtype: None
@@ -492,9 +496,13 @@ def show_delta_file_sizes(delta_table: DeltaTable) -> None:
     size_in_bytes, number_of_files = details["sizeInBytes"], details["numFiles"]
     average_file_size_in_bytes = round(size_in_bytes / number_of_files, 0)
 
-    humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+    if humanize_binary:
+        humanized_size_in_bytes = humanize_bytes_binary(size_in_bytes)
+        humanized_average_file_size = humanize_bytes_binary(average_file_size_in_bytes)
+    else:
+        humanized_size_in_bytes = humanize_bytes(size_in_bytes)
+        humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
     humanized_number_of_files = f"{number_of_files:,}"
-    humanized_average_file_size = humanize_bytes(average_file_size_in_bytes)
 
     print(
         f"The delta table contains {humanized_number_of_files} files with a size of {humanized_size_in_bytes}."
@@ -512,12 +520,36 @@ def humanize_bytes(n: int) -> str:
     :returns: <description>
     :rtype: str
     """
+    kilobyte = 1000
     for prefix, k in (
-        ("PB", 1e15),
-        ("TB", 1e12),
-        ("GB", 1e9),
-        ("MB", 1e6),
-        ("kB", 1e3),
+        ("PB", kilobyte**5),
+        ("TB", kilobyte**4),
+        ("GB", kilobyte**3),
+        ("MB", kilobyte**2),
+        ("kB", kilobyte**1),
+    ):
+        if n >= k * 0.9:
+            return f"{n / k:.2f} {prefix}"
+    return f"{n} B"
+
+
+def humanize_bytes_binary(n: int) -> str:
+    """
+    <description>
+
+    :param n: <description>
+    :type n: int
+
+    :returns: <description>
+    :rtype: str
+    """
+    kibibyte = 1024
+    for prefix, k in (
+        ("PB", kibibyte**5),
+        ("TB", kibibyte**4),
+        ("GB", kibibyte**3),
+        ("MB", kibibyte**2),
+        ("kB", kibibyte**1),
     ):
         if n >= k * 0.9:
             return f"{n / k:.2f} {prefix}"
@@ -594,3 +626,62 @@ def latest_version(delta_table: DeltaTable) -> float:
     """
     version = delta_table.history().agg(max("version")).collect()[0][0]
     return version
+
+
+def constraint_append(
+    delta_table: DeltaTable, append_df: DataFrame, quarantine_table: DeltaTable
+):
+    """
+    <description>
+
+    :param delta_table: <description>
+    :type delta_table: DeltaTable
+    :param append_df: <description>
+    :type append_df: DataFrame
+    :param quarantine_table: <description>
+    :type quarantine_table: DeltaTable
+
+    :raises TypeError: Raises type error when input arguments have an invalid type.
+    :raises TypeError: Raises type error when delta_table has no constraints.
+    """
+
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified for delta_table.")
+
+    if not isinstance(append_df, DataFrame):
+        raise TypeError("You must provide a DataFrame that is to be appended.")
+
+    if not isinstance(quarantine_table, DeltaTable):
+        raise TypeError(
+            "An existing delta table must be specified for quarantine_table."
+        )
+
+    properties = delta_table.detail().select("properties").collect()[0]["properties"]
+    constraints = [
+        v for k, v in properties.items() if k.startswith("delta.constraints")
+    ]
+
+    if not constraints:
+        raise TypeError("There are no constraints present in the target delta table")
+
+    target_details = delta_table.detail().select("location").collect()[0]
+    quarantine_details = quarantine_table.detail().select("location").collect()[0]
+
+    filtered_df = append_df.filter(" and ".join([c for c in constraints]))
+    quarantine_df = append_df.filter(
+        "not (" + " and ".join([c for c in constraints]) + ")"
+    )
+
+    (
+        filtered_df.write.format("delta")
+        .mode("append")
+        .option("mergeSchema", "true")
+        .save(target_details["location"])
+    )
+
+    (
+        quarantine_df.write.format("delta")
+        .mode("append")
+        .option("mergeSchema", "true")
+        .save(quarantine_details["location"])
+    )

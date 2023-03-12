@@ -11,3 +11,10 @@ __pycache__/
 *.py[cod]
 
 .pytest_cache/
+
+# MKDocs
+site
+
+# Virtualenvs
+.venv
+.env
