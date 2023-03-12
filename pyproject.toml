@@ -15,6 +15,7 @@ delta-spark = "2.1.1"
 pytest = "7.2.0"
 chispa = "0.9.2"
 pytest-describe = "^1.0.0"
+ruff = "^0.0.254"
 
 [tool.poetry.group.mkdocs]
 optional = true
@@ -47,5 +48,5 @@ exclude = '''
 )/
 '''
 
-[tool.flake8]
-max-line-length = 150
+[tool.ruff]
+line-length = 150

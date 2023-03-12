@@ -17,16 +17,16 @@ repos:
       - id: end-of-file-fixer
       - id: requirements-txt-fixer
       - id: trailing-whitespace
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.0.245'
+    hooks:
+      - id: ruff
+        args: ["--fix", "--line-length", "150", "--exit-non-zero-on-fix"]
   - repo: https://github.com/psf/black
     rev: 22.12.0
     hooks:
       - id: black
         language_version: python3.9
-  - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-        additional_dependencies: [flake8-bugbear, Flake8-pyproject, pep8-naming]
   - repo: local
     hooks:
     - id: pytest
