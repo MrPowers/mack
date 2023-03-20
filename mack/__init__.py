@@ -668,13 +668,13 @@ def constraint_append(
     if quarantine_table is not None:
         quarantine_details = quarantine_table.detail().select("location").collect()[0]
         quarantine_df = append_df.filter(
-        "not (" + " and ".join([c for c in constraints]) + ")"
+            "not (" + " and ".join([c for c in constraints]) + ")"
         )
         (
-        quarantine_df.write.format("delta")
-        .mode("append")
-        .option("mergeSchema", "true")
-        .save(quarantine_details["location"])
+            quarantine_df.write.format("delta")
+            .mode("append")
+            .option("mergeSchema", "true")
+            .save(quarantine_details["location"])
         )
 
     filtered_df = append_df.filter(" and ".join([c for c in constraints]))
