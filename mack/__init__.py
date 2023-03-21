@@ -651,7 +651,7 @@ def constraint_append(
     if not isinstance(append_df, DataFrame):
         raise TypeError("You must provide a DataFrame that is to be appended.")
 
-    if not isinstance(quarantine_table, DeltaTable):
+    if quarantine_table is not None and not isinstance(quarantine_table, DeltaTable):
         raise TypeError(
             "An existing delta table must be specified for quarantine_table."
         )
@@ -665,23 +665,22 @@ def constraint_append(
         raise TypeError("There are no constraints present in the target delta table")
 
     target_details = delta_table.detail().select("location").collect()[0]
-    quarantine_details = quarantine_table.detail().select("location").collect()[0]
+    if quarantine_table:
+        quarantine_details = quarantine_table.detail().select("location").collect()[0]
+        quarantine_df = append_df.filter(
+            "not (" + " and ".join([c for c in constraints]) + ")"
+        )
+        (
+            quarantine_df.write.format("delta")
+            .mode("append")
+            .option("mergeSchema", "true")
+            .save(quarantine_details["location"])
+        )
 
     filtered_df = append_df.filter(" and ".join([c for c in constraints]))
-    quarantine_df = append_df.filter(
-        "not (" + " and ".join([c for c in constraints]) + ")"
-    )
-
     (
         filtered_df.write.format("delta")
         .mode("append")
         .option("mergeSchema", "true")
         .save(target_details["location"])
-    )
-
-    (
-        quarantine_df.write.format("delta")
-        .mode("append")
-        .option("mergeSchema", "true")
-        .save(quarantine_details["location"])
     )

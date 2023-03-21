@@ -472,7 +472,7 @@ mack.latest_version(delta_table)
 
 ## Append data with constraints
 
-The `constraint_append` function helps to append records to an existing Delta table even if there are records in the append dataframe that violate table constraints, these records are appended to an existing quarantine Delta table instead of the target table.
+The `constraint_append` function helps to append records to an existing Delta table even if there are records in the append dataframe that violate table constraints, these records are appended to an existing quarantine Delta table instead of the target table. If the quarantine Delta table is set to `None`, those records that violate table constraints are simply thrown out.
 
 Suppose you have the following target Delta table with these constraints:
 
@@ -541,7 +541,7 @@ Here's the ending result in quarantine_table:
 +----+----+----+
 ```
 
-Notice that the records that violated either of the constraints are appended to the quarantine table all other records are appended to the target table and the append has not failed.  If a normal append operation was run, then it would have failed on the constraint violation.
+Notice that the records that violated either of the constraints are appended to the quarantine table all other records are appended to the target table and the append has not failed.  If a normal append operation was run, then it would have failed on the constraint violation. If `quarantine_table` is set to `None`, records that violated either of the constraints are simply thrown out.
 
 ## Dictionary
 
