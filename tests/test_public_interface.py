@@ -953,3 +953,142 @@ def test_constraint_append_single_constraint(tmp_path):
     chispa.assert_df_equality(
         quarantined_data, expected_quarantined_df, ignore_row_order=True
     )
+
+
+def test_constraint_append_notnull_constraint(tmp_path):
+
+    target_path = f"{tmp_path}/constraint_append/target_table"
+    quarantine_path = f"{tmp_path}/constraint_append/quarantine_table"
+
+    target_schema = StructType(
+        [
+            StructField("col1", IntegerType(), False),
+            StructField("col2", StringType(), True),
+            StructField("col3", StringType(), False),
+        ]
+    )
+
+    df = spark.createDataFrame([], target_schema)
+
+    target_table = (
+        DeltaTable.create(spark).location(target_path).addColumns(df.schema).execute()
+    )
+
+    quarantine_schema = StructType(
+        [
+            StructField("col1", IntegerType(), True),
+            StructField("col2", StringType(), True),
+            StructField("col3", StringType(), True),
+        ]
+    )
+
+    qdf = spark.createDataFrame([], quarantine_schema)
+
+    quarantine_table = (
+        DeltaTable.create(spark)
+        .location(quarantine_path)
+        .addColumns(qdf.schema)
+        .execute()
+    )
+
+    data = [(None, "A", "B"), (2, "C", None), (3, "E", "F"), (4, "G", "H")]
+    append_df = spark.createDataFrame(data, quarantine_schema)
+
+    mack.constraint_append(target_table, append_df, quarantine_table)
+
+    # target data equality check
+    expected_data = [(3, "E", "F"), (4, "G", "H")]
+    expected_df = spark.createDataFrame(expected_data, target_schema)
+
+    appended_data = spark.read.format("delta").load(target_path)
+    chispa.assert_df_equality(appended_data, expected_df, ignore_row_order=True)
+
+    # quarantined data equality check
+    expected_quarantined_data = [
+        (None, "A", "B"),
+        (2, "C", None),
+    ]
+    expected_quarantined_df = spark.createDataFrame(
+        expected_quarantined_data, quarantine_schema
+    )
+
+    quarantined_data = spark.read.format("delta").load(quarantine_path)
+    chispa.assert_df_equality(
+        quarantined_data, expected_quarantined_df, ignore_row_order=True
+    )
+
+
+def test_constraint_append_notnull_and_check_constraint(tmp_path):
+
+    target_path = f"{tmp_path}/constraint_append/target_table"
+    quarantine_path = f"{tmp_path}/constraint_append/quarantine_table"
+
+    target_schema = StructType(
+        [
+            StructField("col1", IntegerType(), False),
+            StructField("col2", StringType(), True),
+            StructField("col3", StringType(), False),
+        ]
+    )
+
+    df = spark.createDataFrame([], target_schema)
+
+    target_table = (
+        DeltaTable.create(spark)
+        .location(target_path)
+        .addColumns(df.schema)
+        .property("delta.constraints.col1_constraint", "col1 > 0")
+        .execute()
+    )
+
+    quarantine_schema = StructType(
+        [
+            StructField("col1", IntegerType(), True),
+            StructField("col2", StringType(), True),
+            StructField("col3", StringType(), True),
+        ]
+    )
+
+    qdf = spark.createDataFrame([], quarantine_schema)
+
+    quarantine_table = (
+        DeltaTable.create(spark)
+        .location(quarantine_path)
+        .addColumns(qdf.schema)
+        .execute()
+    )
+
+    data = [
+        (0, "A", "B"),
+        (0, "A", None),
+        (None, "A", "B"),
+        (2, "C", None),
+        (3, "E", "F"),
+        (4, "G", "H"),
+    ]
+    append_df = spark.createDataFrame(data, quarantine_schema)
+
+    mack.constraint_append(target_table, append_df, quarantine_table)
+
+    # target data equality check
+    expected_data = [(3, "E", "F"), (4, "G", "H")]
+    expected_df = spark.createDataFrame(expected_data, target_schema)
+
+    appended_data = spark.read.format("delta").load(target_path)
+    chispa.assert_df_equality(appended_data, expected_df, ignore_row_order=True)
+
+    # quarantined data equality check
+    expected_quarantined_data = [
+        (0, "A", "B"),
+        (0, "A", None),
+        (None, "A", "B"),
+        (2, "C", None),
+    ]
+    expected_quarantined_df = spark.createDataFrame(
+        expected_quarantined_data, quarantine_schema
+    )
+
+    quarantined_data = spark.read.format("delta").load(quarantine_path)
+    chispa.assert_df_equality(
+        quarantined_data, expected_quarantined_df, ignore_row_order=True
+    )

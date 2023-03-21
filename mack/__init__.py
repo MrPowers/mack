@@ -657,9 +657,17 @@ def constraint_append(
         )
 
     properties = delta_table.detail().select("properties").collect()[0]["properties"]
-    constraints = [
+    check_constraints = [
         v for k, v in properties.items() if k.startswith("delta.constraints")
     ]
+
+    # add null checks
+    fields = delta_table.toDF().schema.fields
+    null_constraints = [
+        f"{field.name} is not null" for field in fields if not field.nullable
+    ]
+
+    constraints = check_constraints + null_constraints
 
     if not constraints:
         raise TypeError("There are no constraints present in the target delta table")
