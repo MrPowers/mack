@@ -629,7 +629,7 @@ def latest_version(delta_table: DeltaTable) -> float:
 
 
 def constraint_append(
-    delta_table: DeltaTable, append_df: DataFrame, quarantine_table: DeltaTable = None
+    delta_table: DeltaTable, append_df: DataFrame, quarantine_table: DeltaTable
 ):
     """
     <description>
@@ -665,7 +665,7 @@ def constraint_append(
         raise TypeError("There are no constraints present in the target delta table")
 
     target_details = delta_table.detail().select("location").collect()[0]
-    if quarantine_table is not None:
+    if quarantine_table:
         quarantine_details = quarantine_table.detail().select("location").collect()[0]
         quarantine_df = append_df.filter(
             "not (" + " and ".join([c for c in constraints]) + ")"
