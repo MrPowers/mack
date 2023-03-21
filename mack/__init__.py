@@ -651,7 +651,7 @@ def constraint_append(
     if not isinstance(append_df, DataFrame):
         raise TypeError("You must provide a DataFrame that is to be appended.")
 
-    if not isinstance(quarantine_table, DeltaTable) and quarantine_table is not None:
+    if quarantine_table is not None and not isinstance(quarantine_table, DeltaTable):
         raise TypeError(
             "An existing delta table must be specified for quarantine_table."
         )
