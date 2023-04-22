@@ -618,3 +618,7 @@ with `mack`.
 
 - [Daniel Beach (Confessions of a Data Guy): Simplify Delta Lake Complexity with mack.](https://www.confessionsofadataguy.com/simplify-delta-lake-complexity-with-mack/)
 - [Bartosz Konieczny (waitingforcode): Simplified Delta Lake operations with Mack](https://www.waitingforcode.com/delta-lake/simplified-delta-lake-operations-mack/read)
+
+### Videos
+
+- [GeekCoders on YouTube: How I use MACK Library in Delta Lake using Databricks/PySpark](https://www.youtube.com/watch?v=qRR5n6T2N_8)
