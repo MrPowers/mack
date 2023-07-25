@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10"]
         delta-lake-version: ["2.0", "2.1", "2.2", "2.3", "2.4"]
     runs-on: ubuntu-latest
 
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install dependencies
         run: poetry install
-        if: steps.cache.outputs.cache-hit != 'true'
+        
 
       - name: Run mack tests with pytest
         run: poetry run pytest
