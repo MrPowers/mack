@@ -15,6 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+        delta-lake-version: ["2.0", "2.1", "2.2", "2.3", "2.4"]
     runs-on: ubuntu-latest
 
     steps:
@@ -35,13 +36,16 @@ jobs:
         id: cache
         with:
           path: ~/.virtualenvs
-          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          key: poetry-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version}}-${{ matrix.delta-lake-version}}
           restore-keys: |
-            poetry-${{ hashFiles('**/poetry.lock') }}
+            poetry-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version}}-${{ matrix.delta-lake-version}}
 
       - name: Install dependencies
         run: poetry install
         if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Install specific delta-spark version
+        run: poetry update delta-spark==${{ matrix.delta-lake-version }}
 
       - name: Run mack tests with pytest
         run: poetry run pytest
