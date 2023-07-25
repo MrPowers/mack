@@ -41,7 +41,7 @@ jobs:
             poetry-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version}}-${{ matrix.delta-lake-version}}
 
       - name: Install specific delta-spark version
-        run: poetry add delta-spark==${{ matrix.delta-lake-version }}
+        run: poetry update delta-spark==${{ matrix.delta-lake-version }}
 
       - name: Install dependencies
         run: poetry install
