@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
-        delta-lake-version: ["2.0", "2.1", "2.2", "2.3", "2.4"]
+        delta-lake-version: ["1.0", "1.1", "1.2", "2.0", "2.1", "2.2", "2.3", "2.4"]
     runs-on: ubuntu-latest
 
     steps:
