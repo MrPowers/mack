@@ -18,7 +18,7 @@ jobs:
         delta-lake-version: ["1.0", "1.1", "1.2", "2.0", "2.1", "2.2", "2.3", "2.4"]
         pyspark-version: ["3.1", "3.2", "3.3", "3.4"]
     runs-on: ubuntu-latest
-
+    name: test (python ${{ matrix.python-version }}, delta-lake ${{ matrix.delta-lake-version }}, pyspark ${{ matrix.pyspark-version }})
     steps:
       - uses: actions/checkout@v1
         with:
