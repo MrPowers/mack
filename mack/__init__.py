@@ -126,11 +126,10 @@ def type_2_scd_generic_upsert(
         delta_table.alias("base")
         .merge(
             source=staged_updates.alias("staged_updates"),
-            condition=pyspark.sql.functions.expr(
-                f"base.{primary_key} = mergeKey AND base.{is_current_col_name} = true AND ({staged_updates_attrs})"
-            ),
+            condition=pyspark.sql.functions.expr(f"base.{primary_key} = mergeKey"),
         )
         .whenMatchedUpdate(
+            condition=f"base.{is_current_col_name} = true AND ({staged_updates_attrs})",
             set={
                 is_current_col_name: "false",
                 end_time_col_name: f"staged_updates.{effective_time_col_name}",
