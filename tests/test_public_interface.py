@@ -345,7 +345,6 @@ def test_upserts_does_not_insert_duplicate(tmp_path):
     updates_df = spark.createDataFrame(
         [
             (1, "A", dt(2019, 1, 1)),  # duplicate row
-
         ]
     ).toDF("pkey", "attr", "effective_date")
 
@@ -1003,3 +1002,29 @@ def test_constraint_append_single_constraint(tmp_path):
     chispa.assert_df_equality(
         quarantined_data, expected_quarantined_df, ignore_row_order=True
     )
+
+
+def test_rename_delta_table(tmp_path):
+    # Create a temporary directory to hold the Delta table
+    # Create a sample DataFrame
+    data = [("Alice", 1), ("Bob", 2)]
+    df = spark.createDataFrame(data, ["Name", "Age"])
+
+    # Write the DataFrame to a Delta table
+    old_table_path = f"{tmp_path}/old_table"
+    df.write.format("delta").save(old_table_path)
+
+    # Load the Delta table
+    old_table = DeltaTable.forPath(spark, old_table_path)
+
+    # Call the function to rename the Delta table
+    new_table_name = "new_table"
+    mack.rename_delta_table(
+        old_table, new_table_name, databricks=False, spark_session=spark
+    )
+
+    # Verify the table has been renamed
+    assert spark._jsparkSession.catalog().tableExists(new_table_name)
+
+    # Clean up: Drop the new table
+    spark.sql(f"DROP TABLE IF EXISTS {new_table_name}")
