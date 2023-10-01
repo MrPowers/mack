@@ -126,15 +126,14 @@ def type_2_scd_generic_upsert(
         delta_table.alias("base")
         .merge(
             source=staged_updates.alias("staged_updates"),
-            condition=pyspark.sql.functions.expr(
-                f"base.{primary_key} = mergeKey AND base.{is_current_col_name} = true AND ({staged_updates_attrs})"
-            ),
+            condition=pyspark.sql.functions.expr(f"base.{primary_key} = mergeKey"),
         )
         .whenMatchedUpdate(
+            condition=f"base.{is_current_col_name} = true AND ({staged_updates_attrs})",
             set={
                 is_current_col_name: "false",
                 end_time_col_name: f"staged_updates.{effective_time_col_name}",
-            }
+            },
         )
         .whenNotMatchedInsert(values=res_thing)
         .execute()
@@ -692,3 +691,47 @@ def constraint_append(
         .option("mergeSchema", "true")
         .save(target_details["location"])
     )
+
+
+def rename_delta_table(
+    delta_table: DeltaTable,
+    new_table_name: str,
+    table_location: str = None,
+    databricks: bool = False,
+    spark_session: pyspark.sql.SparkSession = None,
+) -> None:
+    """
+    Renames a Delta table to a new name. This function can be used in a Databricks environment or with a
+    standalone Spark session.
+
+    Parameters:
+    delta_table (DeltaTable): The DeltaTable object representing the table to be renamed.
+    new_table_name (str): The new name for the table.
+    table_location (str, optional): The file path where the table is stored. Defaults to None.
+        If None, the function will attempt to determine the location from the DeltaTable object.
+    databricks (bool, optional): A flag indicating whether the function is being run in a Databricks
+        environment. Defaults to False. If True, a SparkSession must be provided.
+    spark_session (pyspark.sql.SparkSession, optional): The Spark session. Defaults to None.
+        Required if `databricks` is set to True.
+
+    Returns:
+    None
+
+    Raises:
+    TypeError: If the provided `delta_table` is not a DeltaTable object, or if `databricks` is True
+        and `spark_session` is None.
+
+    Example Usage:
+    >>> rename_delta_table(existing_delta_table, "new_table_name")
+    """
+    if not isinstance(delta_table, DeltaTable):
+        raise TypeError("An existing delta table must be specified for delta_table.")
+    if databricks and spark_session is None:
+        raise TypeError("A spark session must be specified for databricks.")
+
+    if databricks:
+        spark_session.sql(f"ALTER TABLE {delta_table.name} RENAME TO {new_table_name}")
+    else:
+        delta_table.toDF().write.format("delta").mode("overwrite").saveAsTable(
+            new_table_name
+        )

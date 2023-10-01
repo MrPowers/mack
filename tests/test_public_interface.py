@@ -319,6 +319,55 @@ def test_upserts_based_on_version_number(tmp_path):
     chispa.assert_df_equality(res, expected, ignore_row_order=True)
 
 
+def test_upserts_does_not_insert_duplicate(tmp_path):
+    path = f"{tmp_path}/tmp/delta-no-duplicate"
+    # create Delta Lake
+    data2 = [
+        (1, "A", True, dt(2019, 1, 1), None),
+        (2, "B", True, dt(2019, 1, 1), None),
+        (4, "D", True, dt(2019, 1, 1), None),
+    ]
+
+    schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("attr", StringType(), True),
+            StructField("cur", BooleanType(), True),
+            StructField("effective_date", DateType(), True),
+            StructField("end_date", DateType(), True),
+        ]
+    )
+
+    df = spark.createDataFrame(data=data2, schema=schema)
+    df.write.format("delta").save(path)
+
+    # create updates DF
+    updates_df = spark.createDataFrame(
+        [
+            (1, "A", dt(2019, 1, 1)),  # duplicate row
+        ]
+    ).toDF("pkey", "attr", "effective_date")
+
+    # perform upsert
+    delta_table = DeltaTable.forPath(spark, path)
+    mack.type_2_scd_generic_upsert(
+        delta_table, updates_df, "pkey", ["attr"], "cur", "effective_date", "end_date"
+    )
+
+    actual_df = spark.read.format("delta").load(path)
+
+    expected_df = spark.createDataFrame(
+        [
+            (1, "A", True, dt(2019, 1, 1), None),
+            (2, "B", True, dt(2019, 1, 1), None),
+            (4, "D", True, dt(2019, 1, 1), None),
+        ],
+        schema,
+    )
+
+    chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+
+
 # def describe_kill_duplicates():
 def test_kills_duplicates_in_a_delta_table(tmp_path):
     path = f"{tmp_path}/deduplicate1"
@@ -1092,3 +1141,30 @@ def test_constraint_append_notnull_and_check_constraint(tmp_path):
     chispa.assert_df_equality(
         quarantined_data, expected_quarantined_df, ignore_row_order=True
     )
+
+    
+def test_rename_delta_table(tmp_path):
+    # Create a temporary directory to hold the Delta table
+    # Create a sample DataFrame
+    data = [("Alice", 1), ("Bob", 2)]
+    df = spark.createDataFrame(data, ["Name", "Age"])
+
+    # Write the DataFrame to a Delta table
+    old_table_path = f"{tmp_path}/old_table"
+    df.write.format("delta").save(old_table_path)
+
+    # Load the Delta table
+    old_table = DeltaTable.forPath(spark, old_table_path)
+
+    # Call the function to rename the Delta table
+    new_table_name = "new_table"
+    mack.rename_delta_table(
+        old_table, new_table_name, databricks=False, spark_session=spark
+    )
+
+    # Verify the table has been renamed
+    assert spark._jsparkSession.catalog().tableExists(new_table_name)
+
+    # Clean up: Drop the new table
+    spark.sql(f"DROP TABLE IF EXISTS {new_table_name}")
+
