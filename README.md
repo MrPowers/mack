@@ -554,7 +554,7 @@ Notice that the records that violated either of the constraints are appended to 
 
 ## Rename a Delta Table
 
-This function is designed to rename a Delta table. It can operate either within a Databricks environment or with a standalone Spark session. 
+This function is designed to rename a Delta table. It can operate either within a Databricks environment or with a standalone Spark session.
 
 Here are the parameters for the function:
 
