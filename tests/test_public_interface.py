@@ -1150,19 +1150,19 @@ def test_rename_delta_table(tmp_path):
     df = spark.createDataFrame(data, ["Name", "Age"])
 
     # Write the DataFrame to a Delta table
-    old_table_name = "old_table"
-    df.write.format("delta").save(old_table_name)
+    df.write.format("delta").mode("overwrite").saveAsTable("old_table")
 
     # Load the Delta table
-    old_table = DeltaTable.forName(spark, old_table_name)
+    old_table = DeltaTable.forName(spark, "old_table")
 
     # Call the function to rename the Delta table
     new_table_name = "new_table"
-    mack.rename_delta_table(old_table, new_table_name)
+    mack.rename_delta_table(spark, old_table, new_table_name)
 
     # Verify the table has been renamed
     assert spark._jsparkSession.catalog().tableExists(new_table_name)
 
     # Clean up: Drop the new table
+    spark.sql(f"DROP TABLE IF EXISTS old_table")
     spark.sql(f"DROP TABLE IF EXISTS {new_table_name}")
 
