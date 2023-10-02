@@ -556,7 +556,7 @@ Notice that the records that violated either of the constraints are appended to 
 
 This function is designed to rename a Delta table. It can operate either within a Databricks environment or with a standalone Spark session. 
 
-## Parameters:
+Here are the parameters for the function:
 
 - `delta_table` (`DeltaTable`): An object representing the Delta table to be renamed.
 - `new_table_name` (`str`): The new name for the table.
@@ -564,20 +564,13 @@ This function is designed to rename a Delta table. It can operate either within 
 - `databricks` (`bool`, optional): A flag indicating the function's operational environment. Set to `True` if running within Databricks, otherwise, `False`. Defaults to `False`.
 - `spark_session` (`pyspark.sql.SparkSession`, optional): The Spark session. This is required when `databricks` is set to `True`. Defaults to `None`.
 
-## Returns:
+The function raises a `TypeError` if the provided `delta_table` is not a DeltaTable object, or if `databricks` is set to `True` and `spark_session` is `None`.
 
-- `None`
-
-## Raises:
-
-- `TypeError`: If the provided `delta_table` is not a DeltaTable object, or if `databricks` is set to `True` and `spark_session` is `None`.
-
-## Example Usage:
+Here's how to use the function:
 
 ```python
 rename_delta_table(existing_delta_table, "new_table_name")
 ```
-
 
 ## Dictionary
 
