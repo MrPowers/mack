@@ -1156,4 +1156,5 @@ def test_rename_delta_table(tmp_path):
     assert spark._jsparkSession.catalog().tableExists(new_table_name)
 
     # Clean up: Drop the new table
+    spark.sql(f"DROP TABLE IF EXISTS old_table")
     spark.sql(f"DROP TABLE IF EXISTS {new_table_name}")
