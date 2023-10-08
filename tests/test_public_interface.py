@@ -1142,22 +1142,15 @@ def test_constraint_append_notnull_and_check_constraint(tmp_path):
         quarantined_data, expected_quarantined_df, ignore_row_order=True
     )
 
-    
+
 def test_rename_delta_table(tmp_path):
-    # Create a temporary directory to hold the Delta table
-    # Create a sample DataFrame
     data = [("Alice", 1), ("Bob", 2)]
     df = spark.createDataFrame(data, ["Name", "Age"])
+    old_table_name = "old_table"
+    df.write.mode("overwrite").format("delta").saveAsTable(old_table_name)
 
-    # Write the DataFrame to a Delta table
-    df.write.format("delta").mode("overwrite").saveAsTable("old_table")
-
-    # Load the Delta table
-    old_table = DeltaTable.forName(spark, "old_table")
-
-    # Call the function to rename the Delta table
     new_table_name = "new_table"
-    mack.rename_delta_table(spark, old_table, new_table_name)
+    mack.rename_delta_table(old_table_name, new_table_name, spark)
 
     # Verify the table has been renamed
     assert spark._jsparkSession.catalog().tableExists(new_table_name)
@@ -1165,4 +1158,3 @@ def test_rename_delta_table(tmp_path):
     # Clean up: Drop the new table
     spark.sql(f"DROP TABLE IF EXISTS old_table")
     spark.sql(f"DROP TABLE IF EXISTS {new_table_name}")
-

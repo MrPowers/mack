@@ -695,33 +695,22 @@ def constraint_append(
 
 
 def rename_delta_table(
-    spark: SparkSession,
-    delta_table: DeltaTable,
-    new_table_name: str
+    old_table_name: str,
+    new_table_name: str,
+    spark_session: SparkSession = SparkSession.getActiveSession(),
 ) -> None:
     """
-    Renames a Delta table to a new name. This function can be used in a Databricks environment or with a
-    standalone Spark session.
+    Renames a Delta table to a new name.
 
     Parameters:
-    delta_table (DeltaTable): The DeltaTable object representing the table to be renamed.
+    old_table_name (str): The old name for the table.
     new_table_name (str): The new name for the table.
     spark (pyspark.sql.SparkSession, optional): The Spark session. Defaults to active SparkSession.
 
     Returns:
     None
 
-    Raises:
-    TypeError: If the provided `delta_table` is not a DeltaTable object, or if `databricks` is True
-        and `spark_session` is None.
-
     Example Usage:
-    >>> rename_delta_table(delta_table, "new_table_name")
+    >>> rename_delta_table("old_table_name", "new_table_name")
     """
-    if not isinstance(delta_table, DeltaTable):
-        raise TypeError("An existing delta table must be specified for delta_table.")
-    spark.sql(f"ALTER TABLE {delta_table.name} RENAME TO {new_table_name}")
-    # else:
-    #     delta_table.toDF().write.format("delta").mode("overwrite").saveAsTable(
-    #         new_table_name
-    #     )
+    spark_session.sql(f"ALTER TABLE {old_table_name} RENAME TO {new_table_name}")
