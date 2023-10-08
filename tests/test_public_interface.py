@@ -808,7 +808,7 @@ def test_with_md5_cols(tmp_path):
         ["col1", "col2", "col3", "md5_col2_col3"],
     )
     chispa.assert_df_equality(
-        with_md5, expected_df, ignore_row_order=True, ignore_schema=True
+        with_md5, expected_df, ignore_row_order=True, ignore_nullable=True
     )
 
 

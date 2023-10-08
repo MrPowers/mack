@@ -1,5 +1,5 @@
 from itertools import combinations
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 
 from delta import DeltaTable
 import pyspark
@@ -589,7 +589,7 @@ def find_composite_key_candidates(
 def with_md5_cols(
     df: Union[DeltaTable, DataFrame],
     cols: List[str],
-    output_col_name: str = "",
+    output_col_name: Optional[str] = None,
 ) -> DataFrame:
     """
     <description>
