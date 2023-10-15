@@ -1,5 +1,6 @@
 from itertools import combinations
 from typing import List, Union, Dict, Optional
+from collections import Counter
 
 from delta import DeltaTable
 import pyspark
@@ -735,3 +736,119 @@ def rename_delta_table(
         delta_table.toDF().write.format("delta").mode("overwrite").saveAsTable(
             new_table_name
         )
+
+def type_3_scd_upsert(
+    delta_table: DeltaTable,
+    updates_df: DataFrame,
+    primary_key: str,
+    curr_prev_col_names: dict[str,str]
+) -> None:
+    """
+    Apply scd type 3 updates on a target delta table.
+
+    :param delta_table: The target delta table.
+    :type delta_table: DeltaTable
+    
+    :param updates_df: The source dataframe that will be used to apply scd type 3 on the target delta table.
+    :type updates_df: DataFrame
+    
+    :param primary_key: The primary key (i.e. business key) uniquely identifiy each row in the target delta table.
+    :type primary_key: str
+    
+    :param curr_prev_col_names: A dictionary of column names to store current and previous values. 
+                                -> Key:   Column name for current value.
+                                -> Value: Column name for previous value. 
+    :type curr_prev_col_names: dict[str,str]
+
+    :raises TypeError: Raises type error when find a duplication in the items' value of the dictionary 'curr_prev_col_names'.
+    :raises TypeError: Raises type error when find a key equals to a value in items of the dictionary 'curr_prev_col_names'. 
+    :raises TypeError: Raises type error when required columns are missing in the delta table.
+    :raises TypeError: Raises type error when required columns are missing in the update dataframe.
+    """
+
+     # validate the curr_prev_col_names parameters
+     ## raise an error in case of dict values duplication
+    count_dict = Counter(curr_prev_col_names.values())
+    prev_col_name_duplicates = [(key,value) for key, value in curr_prev_col_names.items() if count_dict[value] > 1]
+
+    if prev_col_name_duplicates:
+         raise TypeError(
+            f"Find duplication in the values of the dictionary curr_prev_col_names: {prev_col_name_duplicates!r}"
+        )
+     ## raise error when find key equals to value
+    keys_equal_to_values = [(key,value) for key, value in curr_prev_col_names.items() if key == value]
+    if keys_equal_to_values:
+         raise TypeError(
+            f"Keys cannot be equal to values in the dictionary curr_prev_col_names: {keys_equal_to_values!r}"
+        )
+
+    # validate the existing Delta table
+    base_col_names = delta_table.toDF().columns
+    required_base_col_names = (
+        [primary_key] 
+        + [items for item in curr_prev_col_names.items() for items in item]
+    )
+    missing_col_names = [item for item in required_base_col_names if item not in base_col_names]
+    if missing_col_names:
+        raise TypeError(
+            f"Cannot find these columns {missing_col_names!r} in the base table {base_col_names!r}"
+        )
+
+    # validate the updates DataFrame
+    updates_col_names = updates_df.columns 
+    prev_col_names = list(curr_prev_col_names.values())
+    required_updates_col_names =  [item for item in base_col_names if item not in (prev_col_names)] # filter out all prev_col_names from base_col_names
+    if  sorted(updates_col_names) != sorted(required_updates_col_names):
+        raise TypeError(
+            f"The updates DataFrame has these columns {updates_col_names!r}, but these columns are required {required_updates_col_names!r}"
+        )
+    
+    # merge condition 
+    merge_condition = pyspark.sql.functions.expr(f"trg.{primary_key} = src.{primary_key}")
+    
+    # update condition 
+    updates_attr = [attr for attr in base_col_names if attr not in (primary_key,prev_col_names)]
+    updates_condition = list(
+        map(lambda attr: f"trg.{attr} <> src.{attr}", updates_attr)
+    )
+    updates_condition = " OR ".join(updates_condition)
+    
+    # rows to be inserted 
+    previous_state_for_inserts = list(
+        map(lambda item: f"NULL as {item}", prev_col_names)
+    )
+
+    staged_inserts_df = (
+        updates_df.alias('inserts')
+        .join(delta_table.toDF().alias('trg'),primary_key,'leftanti')
+        .selectExpr(["inserts.*"] + previous_state_for_inserts)
+    )
+    
+    # rows to be updated
+    previous_state_for_updates = list(
+        map(lambda item: f"coalesce(nullif(trg.{item[0]},updates.{item[0]}),trg.{item[1]}) as {item[1]}" ,curr_prev_col_names.items())
+    )
+    
+    staged_updates_df = (
+        updates_df.alias('updates')
+        .join(delta_table.toDF().alias('trg'),primary_key)
+        .selectExpr(["updates.*"] + previous_state_for_updates)
+    )
+
+    # input data = staged_updates_df  + staged_inserts_df
+    staged_inputs_df = staged_updates_df.union(staged_inserts_df)
+    
+    # perform the merge
+    res = (
+        delta_table.alias('trg')
+        .merge(
+            source=staged_inputs_df.alias('src'),
+            condition=merge_condition
+        )
+        .whenMatchedUpdateAll(
+            condition=updates_condition
+            )
+        .whenNotMatchedInsertAll()
+        .execute()
+    )
+    return res
