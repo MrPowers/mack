@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        # python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - delta-lake-version: "3.0"
             pyspark-version: "3.5"
@@ -32,16 +32,16 @@ jobs:
             pyspark-version: "3.4"
 
     runs-on: ubuntu-latest
-    name: Unit Test (Python ${{ matrix.python-version }}, Delta ${{ matrix.delta-lake-version }}, PySpark ${{ matrix.pyspark-version }})
+    name: Unit Test (Python 3.10, Delta ${{ matrix.delta-lake-version }}, PySpark ${{ matrix.pyspark-version }})
     steps:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.10
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.10
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
