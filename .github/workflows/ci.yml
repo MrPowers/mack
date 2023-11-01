@@ -14,11 +14,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
-        delta-lake-version: ["1.0", "1.1", "1.2", "2.0", "2.1", "2.2", "2.3", "2.4"]
-        pyspark-version: ["3.1", "3.2", "3.3", "3.4"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        delta-lake-version: ["1.0", "1.1", "1.2", "2.0", "2.1", "2.2", "2.3", "2.4", "3.0"]
+        include:
+          - delta-lake-version: "3.0"
+            pyspark-version: "3.5"
+          - delta-lake-version: "2.4"
+            pyspark-version: "3.4"
+          - delta-lake-version: "2.3"
+            pyspark-version: "3.3"
+          - delta-lake-version: "2.2"
+            pyspark-version: "3.3"
+          - delta-lake-version: "2.1"
+            pyspark-version: "3.3"
+          - delta-lake-version: "2.0"
+            pyspark-version: "3.2"
+          - delta-lake-version: "2.4"
+            pyspark-version: "3.4"
+
     runs-on: ubuntu-latest
-    name: test (python ${{ matrix.python-version }}, delta-lake ${{ matrix.delta-lake-version }}, pyspark ${{ matrix.pyspark-version }})
+    name: Unit Test (Python ${{ matrix.python-version }}, Delta ${{ matrix.delta-lake-version }}, PySpark ${{ matrix.pyspark-version }})
     steps:
       - uses: actions/checkout@v1
         with:
