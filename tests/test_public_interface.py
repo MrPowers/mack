@@ -15,7 +15,7 @@ from pyspark.sql.types import (
 import mack
 
 builder = (
-    pyspark.sql.SparkSession.builder.appName("MyApp")
+    pyspark.sql.SparkSession.builder.remote("sc://localhost").appName("MyApp")
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
     .config(
         "spark.sql.catalog.spark_catalog",
