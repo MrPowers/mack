@@ -6,6 +6,7 @@ import pyspark
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col, concat_ws, count, md5, row_number, max
 from pyspark.sql.window import Window
+from pyspark.sql import SparkSession
 
 
 def type_2_scd_upsert(
@@ -694,44 +695,22 @@ def constraint_append(
 
 
 def rename_delta_table(
-    delta_table: DeltaTable,
+    old_table_name: str,
     new_table_name: str,
-    table_location: str = None,
-    databricks: bool = False,
-    spark_session: pyspark.sql.SparkSession = None,
+    spark_session: SparkSession = SparkSession.getActiveSession(),
 ) -> None:
     """
-    Renames a Delta table to a new name. This function can be used in a Databricks environment or with a
-    standalone Spark session.
+    Renames a Delta table to a new name.
 
     Parameters:
-    delta_table (DeltaTable): The DeltaTable object representing the table to be renamed.
+    old_table_name (str): The old name for the table.
     new_table_name (str): The new name for the table.
-    table_location (str, optional): The file path where the table is stored. Defaults to None.
-        If None, the function will attempt to determine the location from the DeltaTable object.
-    databricks (bool, optional): A flag indicating whether the function is being run in a Databricks
-        environment. Defaults to False. If True, a SparkSession must be provided.
-    spark_session (pyspark.sql.SparkSession, optional): The Spark session. Defaults to None.
-        Required if `databricks` is set to True.
+    spark (pyspark.sql.SparkSession, optional): The Spark session. Defaults to active SparkSession.
 
     Returns:
     None
 
-    Raises:
-    TypeError: If the provided `delta_table` is not a DeltaTable object, or if `databricks` is True
-        and `spark_session` is None.
-
     Example Usage:
-    >>> rename_delta_table(existing_delta_table, "new_table_name")
+    >>> rename_delta_table("old_table_name", "new_table_name")
     """
-    if not isinstance(delta_table, DeltaTable):
-        raise TypeError("An existing delta table must be specified for delta_table.")
-    if databricks and spark_session is None:
-        raise TypeError("A spark session must be specified for databricks.")
-
-    if databricks:
-        spark_session.sql(f"ALTER TABLE {delta_table.name} RENAME TO {new_table_name}")
-    else:
-        delta_table.toDF().write.format("delta").mode("overwrite").saveAsTable(
-            new_table_name
-        )
+    spark_session.sql(f"ALTER TABLE {old_table_name} RENAME TO {new_table_name}")
