@@ -578,6 +578,63 @@ This function is designed to rename a Delta table. It can operate either within 
 rename_delta_table(existing_delta_table, "new_table_name")
 ```
 
+## Type 3 SCD Upserts
+
+Perform a type 3 scd upsert on a target delta table. 
+
+Parameters:
+
+- `delta_table` (`DeltaTable`): An object representing the delta table to be upserted.
+- `updates_df`  (`DataFrame`):  The data to be used in order to upsert the target delta table.
+- `primary_key`  (`str`):  The primary key (i.e. business key) uniquely identifiy each row in the target delta table.
+- `curr_prev_col_names`  (`dict[str,str]`): A dictionary of column names to store current and previous values.
+                               `Key`:    Column name for current value.
+                               `Value`: Column name for previous value.
+
+
+Suppose you have the following delta table:
+
+```
++----+----+----+-------+--------+------------+-------------+--------------+
+|pkey|name|job|prev_job| country|prev_country|    continent|prev_continent|
++----+----+---+--------+--------+------------+-------------+--------------+
+|   1|   A| AA|    null|   Japan|        null|         Asia|          null|
+|   2|   B| BB|    null|  London|        null|       Europe|          null| 
+|   3|   C| CC|    null|  canada|        null|North America|          null| 
++----+----+---+--------+--------+------------+-------------+--------------+
+```
+
+The source data to be upserted on target delta table:
+
+```
++----+----+----+-----------+-------------+
+|pkey|name|job|     country|    continent|
++----+----+---+------------+-------------+
+|   1|  A1| AA|       Japan|         Asia|  // update on name 
+|   2|  B1|BBB|        Peru|South America|  // updates on name,job,country,continent --> storing previous values on prev_job,prev_country,prev_continent 
+|   3|   C| CC|  New Zeland|      Oceania|  // updates on country,continent --> storing previous values on prev_country,prev_continent 
+|   5|   D| DD|South Africa|       Africa|  // new row 
++----+----+---+------------+-------------+
+```
+
+Here's how to perform the type 3 scd upsert:
+
+```scala
+mack.type_3_scd_upsert(delta_table, updatesDF, "pkey", {"country":"prev_country", "job":"prev_job", "continent":"prev_continent"})
+```
+
+Here's the table after the upsert:
+
+```
++----+----+----+-------+------------+------------+-------------+--------------+
+|pkey|name|job|prev_job|     country|prev_country|    continent|prev_continent|
++----+----+---+--------+------------+------------+-------------+--------------+
+|   1|  A1| AA|    null|       Japan|        null|         Asia|          null|
+|   2|  B1|BBB|      BB|        Peru|      London|South America|        Europe| 
+|   3|   C| CC|    null|  New Zeland|      canada|      Oceania| North America| 
+|   5|   D| DD|    null|South Africa|        null|       Africa|          null|
++----+----+---+--------+------------+------------+-------------+--------------+
+```
 
 ## Dictionary
 

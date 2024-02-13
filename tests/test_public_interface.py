@@ -1168,3 +1168,306 @@ def test_rename_delta_table(tmp_path):
     # Clean up: Drop the new table
     spark.sql(f"DROP TABLE IF EXISTS {new_table_name}")
 
+
+def test_type_three_scd_upsert_with_single_prev_column(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-with-single-column"
+    input = [
+        (1, "A", "Canada", None),
+        (2, "B", "Germany", None),
+        (3, "C", "Japan", None),
+        (4, "D", "South Africa", None),
+    ]
+    schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("prev_country", StringType(), True),
+        ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = [
+        (2, "B", "France"),  # value to upsert
+        (4, "D", "Nigeria"), # value to upsert
+        (5, "E", "Mexico"),  # new value
+    ]
+    updates_schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("country", StringType(), True),
+        ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+    mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country"})
+
+    actual_df = spark.read.format("delta").load(path)
+
+    expected_df = spark.createDataFrame(
+        [
+            (1, "A", "Canada", None),
+            (2, "B", "France", "Germany"),
+            (3, "C", "Japan", None),
+            (4, "D", "Nigeria", "South Africa"),
+            (5, "E", "Mexico", None),
+        ],
+        schema,
+    )
+
+    chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+
+def test_type_three_scd_upsert_with_multiple_prev_columns(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-with-multiple-columns"
+    input = [
+        (1, "A", "Canada", None,"North America",None),
+        (2, "B", "Germany", None,"Europe",None),
+        (3, "C", "Japan", None,"Asia",None),
+        (4, "D", "Nigeria", None,"Africa",None),
+        (5, "E", "Argentina", None,"South America",None),
+    ]
+    schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("prev_country", StringType(), True),
+            StructField("continent", StringType(), True),
+            StructField("prev_continent", StringType(), True),
+        ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = [
+        (2, "B", "Brazil","South America"),   # value to upsert
+        (4, "D", "Italy", "Europe"),          # value to upsert
+        (5, "E", "Canada", "North America"),  # value to upsert
+        (6, "F", "New Zealand","Oceania"),    # new value
+    ]
+    updates_schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("continent", StringType(), True),
+        ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+    mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country","continent":"prev_continent"})
+
+    actual_df = spark.read.format("delta").load(path)
+
+    expected_df = spark.createDataFrame(
+        [
+            (1, "A", "Canada", None, "North America", None),
+            (2, "B", "Brazil", "Germany", "South America","Europe"),
+            (3, "C", "Japan", None, "Asia", None),
+            (4, "D", "Italy", "Nigeria", "Europe","Africa"),
+            (5, "E", "Canada", "Argentina", "North America", "South America"),
+            (6, "F", "New Zealand", None, "Oceania", None),
+        ],
+        schema,
+    )
+
+    chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+
+
+def test_type_three_scd_upsert_apply_multiple_times_using_the_same_scope(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-with-single-column"
+    input = [
+        (1, "A", "Canada", None),
+        (2, "B", "Germany", None),
+        (3, "C", "Japan", None),
+        (4, "D", "South Africa", None),
+    ]
+    schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("prev_country", StringType(), True),
+        ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = [
+        (2, "B", "France"),  # value to upsert
+        (4, "D", "Nigeria"), # value to upsert
+        (5, "E", "Mexico"),  # new value
+    ]
+    updates_schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("country", StringType(), True),
+        ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+    mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country"})
+    mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country"})
+    mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country"})
+
+    actual_df = spark.read.format("delta").load(path)
+
+    expected_df = spark.createDataFrame(
+        [
+            (1, "A", "Canada", None),
+            (2, "B", "France", "Germany"),
+            (3, "C", "Japan", None),
+            (4, "D", "Nigeria", "South Africa"),
+            (5, "E", "Mexico", None),
+        ],
+        schema,
+    )
+
+    chispa.assert_df_equality(actual_df, expected_df, ignore_row_order=True)
+
+def test_errors_out_type_three_scd_duplication_on_dictionary_values(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-error-duplication-dict-values"
+    input = []
+    schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("job", StringType(), True),
+            StructField("prev_job", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("prev_country", StringType(), True),
+            StructField("continent", StringType(), True),
+            StructField("prev_continent", StringType(), True),
+        ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = []
+    updates_schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("job", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("continent", StringType(), True),
+        ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    with pytest.raises(TypeError): # duplication on dict value 'prev_job'
+        mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country", "job":"prev_job", "continent":"prev_job"}) 
+        
+
+def test_errors_out_type_three_scd_dictionary_keys_equal_to_values(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-error-dict-keys-equal-to-value"
+    input = []
+    schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("job", StringType(), True),
+            StructField("prev_job", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("prev_country", StringType(), True),
+            StructField("continent", StringType(), True),
+            StructField("prev_continent", StringType(), True),
+        ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = []
+    updates_schema = StructType(
+        [
+            StructField("pkey", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("job", StringType(), True),
+            StructField("country", StringType(), True),
+            StructField("continent", StringType(), True),
+        ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    with pytest.raises(TypeError): # the first and last [key,value] are equal
+        mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"country", "job":"prev_job", "continent":"continent"}) 
+        
+
+def test_errors_out_type_three_scd_provided_columns_do_not_exist_in_delta_table(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-error-columns-not-found-in-delta-table"
+    input = []
+    schema = StructType(
+    [
+        StructField("pkey", IntegerType(), True),
+        StructField("name", StringType(), True),
+        StructField("job", StringType(), True),
+        StructField("country", StringType(), True),
+        StructField("prev_country", StringType(), True),
+        StructField("continent", StringType(), True),
+        StructField("prev_continent", StringType(), True),
+    ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = []
+    updates_schema = StructType(
+    [
+        StructField("pkey", IntegerType(), True),
+        StructField("name", StringType(), True),
+        StructField("job", StringType(), True),
+        StructField("country", StringType(), True),
+        StructField("continent", StringType(), True),
+    ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    with pytest.raises(TypeError): # the prev_job does not exist in the target delta table
+        mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"country", "job":"prev_job", "continent":"continent"}) 
+
+
+def test_errors_out_type_three_scd_missing_columns_in_update_dataframe(tmp_path):
+    path = f"{tmp_path}/tmp/delta-type-three-scd-upsert-error-missing-columns-in-update-dataframe"
+    input = []
+    schema = StructType(
+    [
+        StructField("pkey", IntegerType(), True),
+        StructField("name", StringType(), True),
+        StructField("job", StringType(), True),
+        StructField("country", StringType(), True),
+        StructField("prev_country", StringType(), True),
+        StructField("continent", StringType(), True),
+        StructField("prev_continent", StringType(), True),
+    ]
+    )
+    df = spark.createDataFrame(data=input, schema=schema)
+    df.write.format("delta").save(path)
+
+    updates_data = []
+    updates_schema = StructType(
+    [
+        # missing column -> pkey
+        StructField("name", StringType(), True),
+        StructField("job", StringType(), True),
+        StructField("country", StringType(), True),
+        StructField("continent", StringType(), True),
+    ]
+    )
+    updates_df = spark.createDataFrame(data=updates_data, schema=updates_schema)
+
+    delta_table = DeltaTable.forPath(spark, path)
+
+    with pytest.raises(TypeError):
+        mack.type_3_scd_upsert(delta_table, updates_df, "pkey", {"country":"prev_country", "job":"prev_job", "continent":"prev_continent"}) 
