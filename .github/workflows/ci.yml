@@ -11,17 +11,37 @@ on:
 jobs:
 
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        include:
+          - delta-lake-version: "3.0"
+            pyspark-version: "3.5"
+          - delta-lake-version: "2.4"
+            pyspark-version: "3.4"
+          - delta-lake-version: "2.3"
+            pyspark-version: "3.3"
+          - delta-lake-version: "2.2"
+            pyspark-version: "3.3"
+          - delta-lake-version: "2.1"
+            pyspark-version: "3.3"
+          - delta-lake-version: "2.0"
+            pyspark-version: "3.2"
+          - delta-lake-version: "2.4"
+            pyspark-version: "3.4"
 
+    runs-on: ubuntu-latest
+    name: Unit Test (Python 3.10, Delta ${{ matrix.delta-lake-version }}, PySpark ${{ matrix.pyspark-version }})
     steps:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
 
-      - name: Set up Python 3.9
+      - name: Set up Python 3.10
         uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: "3.10"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -31,12 +51,13 @@ jobs:
         id: cache
         with:
           path: ~/.virtualenvs
-          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          key: poetry-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version}}-${{ matrix.delta-lake-version}}-${{ matrix.pyspark-version }}
           restore-keys: |
-            poetry-${{ hashFiles('**/poetry.lock') }}
-      - name: Install dependencies
-        run: poetry install
+            poetry-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version}}-${{ matrix.delta-lake-version}}-${{ matrix.pyspark-version }}
+
+      - name: Install specific delta-spark version
         if: steps.cache.outputs.cache-hit != 'true'
+        run: poetry update delta-spark==${{ matrix.delta-lake-version }} pyspark==${{ matrix.pyspark-version }}
 
       - name: Run mack tests with pytest
         run: poetry run pytest
